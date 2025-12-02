@@ -3,15 +3,38 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import NaturalLanguageUnderstandingV1 from 'ibm-watson/natural-language-understanding/v1';
 import { IamAuthenticator } from 'ibm-watson/auth';
 
+// Servisleri globalde başlat, hata vermesin diye try-catch içine veya boş kontrole gerek yok,
+// çünkü çağırırken kontrol edeceğiz.
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-const nlu = new NaturalLanguageUnderstandingV1({
-  version: '2022-04-07',
-  authenticator: new IamAuthenticator({
-    apikey: process.env.IBM_API_KEY || '',
-  }),
-  serviceUrl: process.env.IBM_SERVICE_URL || '',
-});
+// IBM servisi bazen boş key ile init olduğunda hata atabilir, opsiyonel bırakıyoruz.
+let nlu: NaturalLanguageUnderstandingV1 | null = null;
+if (process.env.IBM_API_KEY && process.env.IBM_SERVICE_URL) {
+  try {
+    nlu = new NaturalLanguageUnderstandingV1({
+      version: '2022-04-07',
+      authenticator: new IamAuthenticator({
+        apikey: process.env.IBM_API_KEY,
+      }),
+      serviceUrl: process.env.IBM_SERVICE_URL,
+    });
+  } catch (err) {
+    console.warn('IBM Watson başlatılamadı:', err);
+  }
+}
+
+// Gemini çıktısını temizleyen yardımcı fonksiyon
+function cleanAndParseJSON(text: string) {
+  try {
+    // Markdown taglerini temizle (```json ve ``` kısımlarını siler)
+    const cleanedText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanedText);
+  } catch (e) {
+    console.error('JSON Parse Hatası:', e);
+    // Parse edilemezse raw text döner
+    return { raw_text: text, error: 'Could not parse JSON' };
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,52 +47,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [geminiResult, ibmResult] = await Promise.all([
+    // İki servisi birbirinden bağımsız çalıştır (Biri patlasa da diğeri dönsün)
+    const [geminiResult, ibmResult] = await Promise.allSettled([
       analyzeWithGemini(text),
       analyzeWithIBM(text),
     ]);
 
-    return NextResponse.json({
-      gemini: geminiResult,
-      ibm: ibmResult,
-    });
-  } catch (error) {
-    console.error('Analysis error:', error);
-    return NextResponse.json(
-      { error: 'Analysis failed', details: String(error) },
-      { status: 500 }
-    );
-  }
-}
-
-async function analyzeWithGemini(text: string) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-  
-  const prompt = `Analyze the cultural and institutional tone of this Turkish text. Provide:
-1. Formality level (formal/informal/mixed)
-2. Cultural context (traditional/modern/neutral)
-3. Institutional tone (corporate/academic/casual/official)
-4. Key cultural markers
-
-Text: "${text}"
-
-Respond in JSON format.`;
-
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  return response.text();
-}
-
-async function analyzeWithIBM(text: string) {
-  const params = {
-    text: text,
-    features: {
-      sentiment: {},
-      emotion: {},
-    },
-    language: 'tr',
-  };
-
-  const response = await nlu.analyze(params);
-  return response.result;
-}
+    // Sonuçları işle
+    const responseData = {
+      gemini: geminiResult.
