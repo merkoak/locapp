@@ -1,6 +1,7 @@
 // src/lib/geminiClient.ts
-// Mock Gemini cultural / tonal risk analysis
-// No external API key required.
+// Google Gemini cultural analysis wrapper (ASCII only)
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export type GeminiInput = {
   text: string;
@@ -9,57 +10,97 @@ export type GeminiInput = {
 };
 
 export type GeminiAnalysis = {
-  overallScore: number; // 0-100
+  overallScore: number;
   culturalRiskSummary: string;
   toneSummary: string;
   topRisks: string[];
   improvementIdeas: string[];
 };
 
-function riskFromText(text: string): number {
-  const len = text.length;
-  if (len < 40) return 60;
-  if (len < 150) return 75;
-  if (len < 400) return 85;
-  return 80;
-}
+const geminiApiKey = process.env.GEMINI_API_KEY;
+
+const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 export async function analyzeWithGemini(
   input: GeminiInput
 ): Promise<GeminiAnalysis> {
   const { text, market = "Global", audience = "general" } = input;
-  const baseScore = riskFromText(text);
 
-  const lower = text.toLowerCase();
-  const risks: string[] = [];
-  const improvements: string[] = [];
+  // Fallback mock when env is missing
+  if (!genAI) {
+    return {
+      overallScore: 60,
+      culturalRiskSummary:
+        "Gemini is not configured; using mock cultural risk summary.",
+      toneSummary:
+        "Tone seems acceptable for a general audience, but this is a mock response.",
+      topRisks: [
+        "Real cultural red flags may exist. Run a human localization review.",
+      ],
+      improvementIdeas: [
+        "Configure Gemini API and rerun the audit.",
+        "Have a native localization specialist review this copy.",
+      ],
+    };
+  }
 
-  if (lower.includes("religion") || lower.includes("politics")) {
-    risks.push("Mentions sensitive topics (religion/politics).");
-    improvements.push(
-      "Clarify stance or avoid polarizing language for this market."
-    );
-  }
-  if (lower.includes("best") || lower.includes("number one")) {
-    risks.push("Uses absolute claims that may sound unrealistic.");
-    improvements.push("Use more specific, verifiable value propositions.");
-  }
-  if (risks.length === 0) {
-    risks.push(
-      "No obvious red flags, but local validation is still recommended."
-    );
-  }
-  if (improvements.length === 0) {
-    improvements.push(
-      "Run a quick human review with a native marketing team."
-    );
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+  });
+
+  const prompt = `
+You are a cultural and tone-of-voice risk auditor for marketing copy.
+
+Return a STRICT JSON object with the following shape (no markdown, no extra text):
+
+{
+  "overallScore": number from 0 to 100,
+  "culturalRiskSummary": "short paragraph",
+  "toneSummary": "short paragraph",
+  "topRisks": ["bullet 1", "bullet 2"],
+  "improvementIdeas": ["idea 1", "idea 2"]
+}
+
+Text to analyze:
+"${text}"
+
+Target market: ${market}
+Audience: ${audience}
+`;
+
+  const result = await model.generateContent(prompt);
+  const responseText = result.response.text();
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(responseText);
+  } catch {
+    parsed = {
+      overallScore: 70,
+      culturalRiskSummary:
+        "Model response could not be parsed. Defaulting to a medium risk score.",
+      toneSummary: "Tone may need additional human review.",
+      topRisks: ["Could not parse structured risks from model output."],
+      improvementIdeas: [
+        "Run a manual review with a native localization specialist.",
+      ],
+    };
   }
 
   return {
-    overallScore: baseScore,
-    culturalRiskSummary: `No critical cultural red flags detected for ${market}, but subtle issues may still exist.`,
-    toneSummary: `Tone seems acceptable for a ${audience} audience, but could be refined for higher trust.`,
-    topRisks: risks,
-    improvementIdeas: improvements,
+    overallScore: parsed.overallScore ?? 70,
+    culturalRiskSummary:
+      parsed.culturalRiskSummary ??
+      "No critical cultural red flags detected, but subtle issues may still exist.",
+    toneSummary:
+      parsed.toneSummary ??
+      "Tone seems acceptable but could be refined for higher trust.",
+    topRisks:
+      parsed.topRisks ?? [
+        "No obvious red flags, but local validation is still recommended.",
+      ],
+    improvementIdeas:
+      parsed.improvementIdeas ??
+      ["Run a quick human review with a native marketing team."],
   };
 }
