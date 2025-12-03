@@ -4,10 +4,9 @@ import NaturalLanguageUnderstandingV1 from 'ibm-watson/natural-language-understa
 import { IamAuthenticator } from 'ibm-watson/auth';
 
 // 1. SERVİS İLK BAŞLATMA
-
+// API Key'leriniz eksikse, runtime hatası (500) almamak için opsiyonel başlatma.
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// IBM servisini sadece key varsa başlat, yoksa null olsun (hata fırlatmasın)
 let nlu: NaturalLanguageUnderstandingV1 | null = null;
 if (process.env.IBM_API_KEY && process.env.IBM_SERVICE_URL) {
   try {
@@ -28,7 +27,7 @@ if (process.env.IBM_API_KEY && process.env.IBM_SERVICE_URL) {
 // Gemini çıktısını temizleyip JSON'a dönüştüren fonksiyon
 function cleanAndParseJSON(text: string) {
   try {
-    // Markdown taglerini temizle (```json ve ``` kısımlarını siler)
+    // Önceki hatanın sebebi olan Markdown taglerini temizle (```json ve ``` kısımlarını siler)
     const cleanedText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanedText);
   } catch (e) {
@@ -94,14 +93,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // İki servisi birbirinden bağımsız çalıştır (Promise.allSettled)
+    // Promise.allSettled: Biri hata verse bile diğerinin sonucunu almanızı sağlar (Robust çözüm)
     const [geminiResult, ibmResult] = await Promise.allSettled([
       analyzeWithGemini(text),
       analyzeWithIBM(text),
     ]);
 
-    // Sonuçları işle - biri hata verse bile diğeri başarılı sonucu döner
+    // Sonuçları işle - Hata durumunda bile diğer başarılı sonucu döndürür.
     const responseData = {
+      // Turbopack hatasını veren kod parçası (şimdi tamamlandı)
       gemini: geminiResult.status === 'fulfilled' ? geminiResult.value : { error: 'Gemini analysis failed' },
       ibm: ibmResult.status === 'fulfilled' ? ibmResult.value : { error: 'IBM analysis failed or not configured' },
     };
