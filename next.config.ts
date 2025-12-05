@@ -1,8 +1,7 @@
-import { type NextConfig } from 'next'; // NextConfig tipi buraya eklendi
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // IBM-Watson için gerekli dış paket tanımı
-  serverExternalPackages: ['ibm-watson'],
+  /* config options here */
 };
 
 export default nextConfig;
