@@ -1,65 +1,116 @@
 // src/lib/geminiClient.ts
-// Mock Gemini cultural / tonal risk analysis
-// No external API key required.
+// ASCII-only file. Gemini Flash cultural analysis for LocAI.
 
-export type GeminiInput = {
-  text: string;
-  market?: string;
-  audience?: string;
-};
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export type GeminiAnalysis = {
-  overallScore: number; // 0-100
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL_ID = "gemini-flash-latest";
+
+export type GeminiResult = {
+  overallScore: number;
   culturalRiskSummary: string;
   toneSummary: string;
   topRisks: string[];
   improvementIdeas: string[];
 };
 
-function riskFromText(text: string): number {
-  const len = text.length;
-  if (len < 40) return 60;
-  if (len < 150) return 75;
-  if (len < 400) return 85;
-  return 80;
+function buildPrompt(
+  text: string,
+  market: string,
+  audience: string
+): string {
+  return [
+    "You are a cultural and tone-of-voice risk auditor for marketing copy.",
+    "You do NOT translate. You only analyze.",
+    "",
+    `Target market: ${market || "Turkey"}`,
+    `Audience: ${audience || "general"}`,
+    "",
+    "Analyze the copy for:",
+    "- Cultural taboos and local sensitivities.",
+    "- Tone-of-voice risk (over-promising, offensive tone, etc.).",
+    "- Any mismatch between message and market.",
+    "",
+    "Return ONLY a JSON object with this exact shape:",
+    "",
+    "{",
+    '  "overallScore": number (0-100, higher is safer),',
+    '  "culturalRiskSummary": "one short paragraph",',
+    '  "toneSummary": "one short paragraph about tone of voice and over-promising risk",',
+    '  "topRisks": ["bullet 1", "bullet 2", "..."],',
+    '  "improvementIdeas": ["bullet 1", "bullet 2", "..."]',
+    "}",
+    "",
+    "Copy to analyze:",
+    "-----",
+    text,
+    "-----"
+  ].join("\n");
 }
 
+function safeParse(text: string): GeminiResult {
+  try {
+    const data = JSON.parse(text);
+
+    return {
+      overallScore:
+        typeof data.overallScore === "number" ? data.overallScore : 65,
+      culturalRiskSummary:
+        typeof data.culturalRiskSummary === "string"
+          ? data.culturalRiskSummary
+          : "No cultural summary provided by the model.",
+      toneSummary:
+        typeof data.toneSummary === "string"
+          ? data.toneSummary
+          : "No tone summary provided by the model.",
+      topRisks: Array.isArray(data.topRisks)
+        ? data.topRisks.map((x: unknown) => String(x))
+        : ["No explicit risks listed by the model."],
+      improvementIdeas: Array.isArray(data.improvementIdeas)
+        ? data.improvementIdeas.map((x: unknown) => String(x))
+        : ["No improvement suggestions listed by the model."]
+    };
+  } catch {
+    return {
+      overallScore: 65,
+      culturalRiskSummary:
+        "Model response could not be parsed as JSON. Using safe defaults.",
+      toneSummary:
+        "Tone-of-voice analysis is unavailable due to parsing issues.",
+      topRisks: ["No risks extracted from the model response."],
+      improvementIdeas: [
+        "Review copy with a human localization specialist for concrete suggestions."
+      ]
+    };
+  }
+}
+
+/**
+ * Single exported function for Gemini analysis.
+ */
 export async function analyzeWithGemini(
-  input: GeminiInput
-): Promise<GeminiAnalysis> {
-  const { text, market = "Global", audience = "general" } = input;
-  const baseScore = riskFromText(text);
-
-  const lower = text.toLowerCase();
-  const risks: string[] = [];
-  const improvements: string[] = [];
-
-  if (lower.includes("religion") || lower.includes("politics")) {
-    risks.push("Mentions sensitive topics (religion/politics).");
-    improvements.push(
-      "Clarify stance or avoid polarizing language for this market."
-    );
-  }
-  if (lower.includes("best") || lower.includes("number one")) {
-    risks.push("Uses absolute claims that may sound unrealistic.");
-    improvements.push("Use more specific, verifiable value propositions.");
-  }
-  if (risks.length === 0) {
-    risks.push(
-      "No obvious red flags, but local validation is still recommended."
-    );
-  }
-  if (improvements.length === 0) {
-    improvements.push(
-      "Run a quick human review with a native marketing team."
-    );
+  text: string,
+  market: string,
+  audience: string
+): Promise<GeminiResult> {
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not set. Gemini cannot be called.");
   }
 
-  return {
-    overallScore: baseScore,
-    culturalRiskSummary: `No critical cultural red flags detected for ${market}, but subtle issues may still exist.`,
-    toneSummary: `Tone seems acceptable for a ${audience} audience, but could be refined for higher trust.`,
-    topRisks: risks,
-    improvementIdeas: improvements,
-  };
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_ID });
+
+  const prompt = buildPrompt(text, market, audience);
+
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: prompt }]
+      }
+    ]
+  });
+
+  const responseText = result.response.text();
+  return safeParse(responseText);
 }

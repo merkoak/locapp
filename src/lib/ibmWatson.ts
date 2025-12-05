@@ -1,57 +1,91 @@
 // src/lib/ibmWatson.ts
-// Mock IBM Watson sentiment + safety analysis
-// No external SDK or API key required.
+// ASCII-only helper for IBM Watson NLU sentiment analysis.
 
-export type WatsonAnalysis = {
-  overallScore: number; // 0-100
-  sentimentLabel: "positive" | "neutral" | "negative";
-  sentimentScore: number; // -1..1
-  topFlags: string[];
-};
+import NaturalLanguageUnderstandingV1 from "ibm-watson/natural-language-understanding/v1";
+import { IamAuthenticator } from "ibm-cloud-sdk-core";
 
-function scoreFromText(text: string): number {
-  // Very naive, deterministic-ish score based on length
-  const len = text.length;
-  if (len < 40) return 55;
-  if (len < 120) return 72;
-  if (len < 300) return 82;
-  return 78;
+const IBM_API_KEY = process.env.IBM_API_KEY || "";
+const IBM_API_URL = process.env.IBM_API_URL || "";
+
+let nluClient: NaturalLanguageUnderstandingV1 | null = null;
+
+function getClient(): NaturalLanguageUnderstandingV1 {
+  if (!IBM_API_KEY || !IBM_API_URL) {
+    throw new Error("IBM_API_KEY or IBM_API_URL is not set.");
+  }
+
+  if (!nluClient) {
+    nluClient = new NaturalLanguageUnderstandingV1({
+      version: "2022-04-07",
+      authenticator: new IamAuthenticator({
+        apikey: IBM_API_KEY,
+      }),
+      serviceUrl: IBM_API_URL,
+    });
+  }
+
+  return nluClient;
 }
 
-export async function runWatsonAnalysis(text: string): Promise<WatsonAnalysis> {
-  const baseScore = scoreFromText(text);
+function scaleSentimentToScore(score: number): number {
+  // Watson gives -1..1, we convert to 0..100
+  const clamped = Math.max(-1, Math.min(1, score));
+  return Math.round((clamped + 1) * 50);
+}
 
-  // Fake sentiment based on presence of some keywords
-  const lower = text.toLowerCase();
-  let sentimentScore = 0;
-  let sentimentLabel: WatsonAnalysis["sentimentLabel"] = "neutral";
+export async function runWatsonAnalysis(text: string) {
+  const client = getClient();
 
-  if (lower.includes("hate") || lower.includes("terrible")) {
-    sentimentScore = -0.7;
-    sentimentLabel = "negative";
-  } else if (lower.includes("love") || lower.includes("amazing")) {
-    sentimentScore = 0.8;
-    sentimentLabel = "positive";
-  } else {
-    sentimentScore = 0;
-    sentimentLabel = "neutral";
+  const response = await client.analyze({
+    text,
+    features: {
+      sentiment: {},
+      emotion: {},
+    },
+    // Mostly English marketing copy now; we can change later if needed.
+    language: "en",
+  });
+
+  const result: any = response.result || {};
+  const sentimentDoc = result.sentiment?.document || {};
+  const emotionDoc = result.emotion?.document?.emotion || {};
+
+  const sentimentScore = typeof sentimentDoc.score === "number"
+    ? sentimentDoc.score
+    : 0;
+
+  const sentimentLabel: "positive" | "neutral" | "negative" =
+    sentimentDoc.label === "positive" ||
+    sentimentDoc.label === "neutral" ||
+    sentimentDoc.label === "negative"
+      ? sentimentDoc.label
+      : "neutral";
+
+  const overallScore = scaleSentimentToScore(sentimentScore);
+
+  const flags: string[] = [];
+
+  if (sentimentScore > 0.6) {
+    flags.push("Copy sounds very enthusiastic. Check for over-promising claims.");
+  }
+  if (sentimentScore < -0.4) {
+    flags.push("Copy feels quite negative. This might not be ideal for marketing.");
+  }
+  if ((emotionDoc.joy ?? 0) > 0.7) {
+    flags.push("Very high joy emotion detected; ensure it still sounds credible.");
+  }
+  if ((emotionDoc.anger ?? 0) > 0.4) {
+    flags.push("Noticeable anger detected; review tone carefully.");
   }
 
-  const topFlags: string[] = [];
-  if (sentimentLabel === "negative") {
-    topFlags.push("Message feels negative or harsh.");
-  }
-  if (sentimentLabel === "positive" && sentimentScore > 0.7) {
-    topFlags.push("Message may sound over-promising.");
-  }
-  if (topFlags.length === 0) {
-    topFlags.push("No major sentiment issues detected.");
+  if (flags.length === 0) {
+    flags.push("No major sentiment issues detected by Watson.");
   }
 
   return {
-    overallScore: baseScore,
+    overallScore,
     sentimentLabel,
     sentimentScore,
-    topFlags,
+    topFlags: flags,
   };
 }
