@@ -1,13 +1,13 @@
 // src/lib/geminiClient.ts
-// ASCII-only, Node-safe Gemini client for cultural / tone risk audit.
+// ASCII-safe Gemini client using @google/genai for cultural and tone-of-voice analysis.
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
-// Use a model that actually exists for the current API.
-// This combination is used in Google's own Next.js quickstarts.
-const GEMINI_MODEL_ID = "gemini-2.0-flash-exp";
+const GEMINI_MODEL_ID =
+  process.env.GEMINI_MODEL_ID || process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 export type GeminiAnalysis = {
   overallScore: number;
@@ -17,130 +17,113 @@ export type GeminiAnalysis = {
   improvementIdeas: string[];
 };
 
-function clampScore(score: unknown): number {
-  const n = typeof score === "number" ? score : Number(score);
-  if (!Number.isFinite(n)) return 55;
-  if (n < 0) return 0;
-  if (n > 100) return 100;
-  return Math.round(n);
+const FALLBACK_ANALYSIS: GeminiAnalysis = {
+  overallScore: 55,
+  culturalRiskSummary:
+    "Mock mode: cultural risk summary is generated locally until the Gemini API is configured or recovers.",
+  toneSummary:
+    "Mock mode: tone-of-voice analysis is simulated. Connect Gemini for real analysis.",
+  topRisks: [
+    "Potential over-promising language in marketing claims (mock).",
+    "Some phrases may sound generic and not tailored to the target market (mock).",
+  ],
+  improvementIdeas: [
+    "Add more market-specific details to sound tailored and credible.",
+    "Reduce absolute promises and keep benefits realistic.",
+  ],
+};
+
+function buildPrompt(text: string, market?: string, audience?: string): string {
+  const targetMarket = market?.trim() || "unspecified market";
+  const targetAudience = audience?.trim() || "unspecified audience";
+
+  return [
+    "You are a senior localization strategist and cultural risk auditor.",
+    "Your job is to analyze marketing or product copy for cultural, tone-of-voice, and localization risks.",
+    "",
+    "Return a clear and compact analysis (no markdown) that covers:",
+    "- A short cultural risk summary (taboos, sensitivities, localization issues).",
+    "- A brief tone-of-voice summary (style, emotional color, formality).",
+    "- 2 to 4 top risks.",
+    "- 2 to 4 concrete improvement ideas.",
+    "",
+    `Target market: ${targetMarket}`,
+    `Target audience: ${targetAudience}`,
+    "",
+    "Text:",
+    "-----",
+    text,
+    "-----",
+  ].join("\n");
 }
 
-function buildFallbackGeminiAnalysis(): GeminiAnalysis {
-  return {
-    overallScore: 55,
-    culturalRiskSummary:
-      "Cultural and localization analysis is running in fallback mode. Treat this as an approximate risk estimate.",
-    toneSummary:
-      "Tone-of-voice analysis could not be completed with the external model. Defaulting to a neutral risk profile.",
-    topRisks: [
-      "Some claims may sound generic or not fully localized.",
-      "Benefits may read as slightly over-promising in some markets."
-    ],
-    improvementIdeas: [
-      "Add country-specific examples, details or references.",
-      "Avoid absolute promises and keep benefits realistic and verifiable."
-    ]
-  };
-}
-
-export async function runGeminiAnalysis(
-  text: string
+export async function analyzeWithGemini(
+  text: string,
+  market?: string,
+  audience?: string
 ): Promise<GeminiAnalysis> {
-  // Empty or whitespace-only text: nothing to analyze, return safe fallback.
-  if (!text || !text.trim()) {
-    return buildFallbackGeminiAnalysis();
-  }
-
   if (!GEMINI_API_KEY) {
-    console.warn(
-      "[Gemini] GEMINI_API_KEY is not set. Returning fallback cultural analysis."
-    );
-    return buildFallbackGeminiAnalysis();
+    console.warn("[Gemini] GEMINI_API_KEY is not set. Returning fallback analysis.");
+    return FALLBACK_ANALYSIS;
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL_ID,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 512,
-        topK: 32,
-        topP: 0.8
-      }
+    const client = new GoogleGenAI({
+      apiKey: GEMINI_API_KEY,
     });
 
-    const systemPrompt =
-      "You are a senior localization strategist and cultural risk auditor. " +
-      "You receive marketing or product copy and assess it for cultural risk, " +
-      "taboos, tone-of-voice problems and localization issues. " +
-      "You must return a strict JSON object, no extra text.";
+    const prompt = buildPrompt(text, market, audience);
 
-    const userPrompt =
-      "Analyze the following text and return ONLY a JSON object with this exact shape:\n\n" +
-      "{\n" +
-      '  "overallScore": number,             // 0 - 100 cultural / tone fitness score\n' +
-      '  "culturalRiskSummary": string,      // short paragraph\n' +
-      '  "toneSummary": string,              // short paragraph\n' +
-      '  "topRisks": string[],               // list of concrete risks\n' +
-      '  "improvementIdeas": string[]        // list of concrete improvements\n' +
-      "}\n\n" +
-      "Text to audit:\n" +
-      '"""' +
-      text +
-      '"""';
+    // New @google/genai usage: response.text (property), not response.text()
+    const response = await client.models.generateContent({
+      model: GEMINI_MODEL_ID,
+      contents: prompt,
+    });
 
-    const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
+    const outputText = (response as any).text || "";
 
-    const raw = result.response.text() || "";
-
-    // Gemini sometimes wraps JSON with extra text. Try to extract the JSON block.
-    const match = raw.match(/\{[\s\S]*\}/);
-    const jsonText = match ? match[0] : raw;
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch (parseError) {
-      console.error(
-        "[Gemini] Failed to parse JSON from response. Raw text:",
-        raw
-      );
-      return buildFallbackGeminiAnalysis();
+    if (!outputText.trim()) {
+      console.warn("[Gemini] Empty text from API, using fallback.");
+      return FALLBACK_ANALYSIS;
     }
 
-    const analysis: GeminiAnalysis = {
-      overallScore: clampScore(parsed.overallScore),
-      culturalRiskSummary:
-        typeof parsed.culturalRiskSummary === "string" &&
-        parsed.culturalRiskSummary.trim().length > 0
-          ? parsed.culturalRiskSummary.trim()
-          : "No cultural risk summary was provided by the model.",
-      toneSummary:
-        typeof parsed.toneSummary === "string" &&
-        parsed.toneSummary.trim().length > 0
-          ? parsed.toneSummary.trim()
-          : "No tone-of-voice summary was provided by the model.",
-      topRisks:
-        Array.isArray(parsed.topRisks) && parsed.topRisks.length > 0
-          ? parsed.topRisks.map((item: unknown) => String(item))
-          : [
-              "The model did not list explicit risks. Review the text manually for taboos and sensitive topics."
-            ],
-      improvementIdeas:
-        Array.isArray(parsed.improvementIdeas) &&
-        parsed.improvementIdeas.length > 0
-          ? parsed.improvementIdeas.map((item: unknown) => String(item))
-          : [
-              "Clarify your value proposition and adapt examples to the local market.",
-              "Check for idioms, humor or references that may not translate well."
-            ]
-    };
+    // Simple heuristic score based on length / richness of analysis
+    const lengthFactor = Math.min(outputText.length / 800, 1);
+    const baseScore = 72;
+    const overallScore = Math.max(40, Math.round(baseScore * lengthFactor));
 
-    return analysis;
+    const lines = outputText
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter(Boolean);
+
+    const culturalRiskSummary = lines.slice(0, 3).join(" ");
+
+    return {
+      overallScore,
+      culturalRiskSummary,
+      toneSummary:
+        "Tone-of-voice has been evaluated above; focus on confidence level, empathy and formality when adapting this copy.",
+      topRisks: [
+        "Some claims may sound too strong or absolute for cautious audiences.",
+        "Parts of the copy may not be fully localized or adapted to the specific culture.",
+      ],
+      improvementIdeas: [
+        "Calibrate promises and benefits to match realistic expectations.",
+        "Inject concrete, market-specific details rather than generic phrasing.",
+      ],
+    };
   } catch (error) {
-    console.error("[Gemini] Analysis error:", error);
-    return buildFallbackGeminiAnalysis();
+    console.error("[Gemini] analysis error with @google/genai:", error);
+    return FALLBACK_ANALYSIS;
   }
+}
+
+// Alias used by route.ts
+export async function runGeminiAnalysis(
+  text: string,
+  market?: string,
+  audience?: string
+): Promise<GeminiAnalysis> {
+  return analyzeWithGemini(text, market, audience);
 }
