@@ -1,229 +1,192 @@
 // src/app/api/analyze/route.ts
-// LocAI analyze endpoint – Watson + Gemini with safe fallback to mocks.
-// ASCII-only file.
+// LocApp AI analyze endpoint – combines Watson + Gemini.
+// ASCII-only.
 
 import { NextResponse } from "next/server";
-import { runWatsonAnalysis } from "@/lib/ibmWatson";
-import { analyzeWithGemini, GeminiResult } from "@/lib/geminiClient";
+import { runWatsonAnalysis, WatsonResult } from "@/lib/ibmWatson";
+import { runGeminiAnalysis, GeminiAnalysis } from "@/lib/geminiClient";
 
 export const runtime = "nodejs";
 
 type RiskLevel = "low" | "medium" | "high";
 
-type WatsonAnalysis = {
+type WatsonPayload = {
   overallScore: number;
-  sentimentLabel: "positive" | "neutral" | "negative";
+  sentimentLabel: string;
   sentimentScore: number;
   topFlags: string[];
 };
 
-type GeminiAnalysis = GeminiResult;
-
-type AnalysisResult = {
+type GeminiPayload = {
   overallScore: number;
-  riskLevel: RiskLevel;
-  watson: WatsonAnalysis;
-  gemini: GeminiAnalysis;
+  culturalRiskSummary: string;
+  toneSummary: string;
+  topRisks: string[];
+  improvementIdeas: string[];
 };
 
+type AnalyzeResponse = {
+  overallScore: number;
+  riskLevel: RiskLevel;
+  watson: WatsonPayload;
+  gemini: GeminiPayload;
+};
+
+function clampScore(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return Math.round(n);
+}
+
 function getRiskLevel(score: number): RiskLevel {
-  if (score < 70) return "high";
-  if (score < 85) return "medium";
-  return "low";
+  if (score < 40) return "low";
+  if (score < 70) return "medium";
+  return "high";
 }
 
-function safeNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && !Number.isNaN(value) ? value : fallback;
-}
-
-// If any env is missing we go straight to mock mode
-const USE_MOCK =
-  !process.env.IBM_API_KEY ||
-  !process.env.IBM_API_URL ||
-  !process.env.GEMINI_API_KEY;
-
-// Simple Watson mock
-async function mockWatson(text: string): Promise<WatsonAnalysis> {
-  const lenFactor = Math.min(text.length / 400, 1);
-  const base = 60 + Math.round(lenFactor * 20) - 10;
-
-  return {
-    overallScore: Math.max(30, Math.min(95, base)),
-    sentimentLabel: "neutral",
-    sentimentScore: 0.05,
-    topFlags: [
-      "Mock mode: Watson API is not configured or failed.",
-      "Connect IBM NLU credentials in .env.local for real sentiment analysis."
-    ]
-  };
-}
-
-// Simple Gemini mock
-async function mockGemini(text: string): Promise<GeminiAnalysis> {
-  const lenFactor = Math.min(text.length / 400, 1);
-  const base = 65 + Math.round(lenFactor * 15) - 10;
-
-  return {
-    overallScore: Math.max(35, Math.min(96, base)),
-    culturalRiskSummary:
-      "Mock mode: cultural risk summary is generated locally until Gemini API is configured or recovers.",
-    toneSummary:
-      "Mock mode: tone-of-voice analysis is simulated. Connect Gemini Flash for real analysis.",
-    topRisks: [
-      "Potential over-promising language in marketing claims (mock).",
-      "Some phrases may sound generic and not tailored to the target market (mock)."
-    ],
-    improvementIdeas: [
-      "Add more market-specific details to sound tailored and credible.",
-      "Reduce absolute promises and keep benefits realistic."
-    ]
-  };
-}
-
-export async function POST(request: Request) {
-  let text = "";
-
+export async function POST(req: Request) {
   try {
-    const body = await request.json().catch(() => null);
+    const body = await req.json().catch(() => ({}));
+    const text = typeof body.text === "string" ? body.text : "";
 
-    if (!body || typeof body.text !== "string") {
+    if (!text.trim()) {
       return NextResponse.json(
-        { error: "Missing or invalid 'text' field." },
+        { error: "Missing 'text' in request body." },
         { status: 400 }
       );
     }
 
-    text = body.text.trim();
-    const market: string =
-      typeof body.market === "string" ? body.market : "Turkey";
-    const audience: string =
-      typeof body.audience === "string" ? body.audience : "general";
+    // Optional fields – you already send them, ama boş gelirse default olsun:
+    const market =
+      typeof body.market === "string" && body.market.trim().length > 0
+        ? body.market
+        : "Global";
+    const audience =
+      typeof body.audience === "string" && body.audience.trim().length > 0
+        ? body.audience
+        : "General decision makers";
 
-    if (!text) {
-      return NextResponse.json(
-        { error: "Text cannot be empty." },
-        { status: 400 }
-      );
-    }
+    // Run IBM + Gemini in parallel
+    let watsonRaw: WatsonResult | null = null;
+    let geminiRaw: GeminiAnalysis | null = null;
 
-    let watson: WatsonAnalysis | null = null;
-    let gemini: GeminiAnalysis | null = null;
+    await Promise.all([
+      (async () => {
+        try {
+          watsonRaw = await runWatsonAnalysis(text);
+        } catch (err) {
+          console.error("[Watson] route error:", err);
+        }
+      })(),
+      (async () => {
+        try {
+          // note: our runGeminiAnalysis currently only takes text
+          // if you later extend it with market/audience, add them here
+          geminiRaw = await runGeminiAnalysis(text);
+        } catch (err) {
+          console.error("[Gemini] route error:", err);
+        }
+      })(),
+    ]);
 
-    if (USE_MOCK) {
-      // Direct mock mode if env is missing
-      [watson, gemini] = await Promise.all([
-        mockWatson(text),
-        mockGemini(text)
-      ]);
+    // Map Watson result
+    let watson: WatsonPayload;
+    if (watsonRaw) {
+      const anyW = watsonRaw as any;
+      watson = {
+        overallScore: clampScore(anyW.overallScore, 50),
+        sentimentLabel: String(anyW.sentimentLabel || "neutral"),
+        sentimentScore:
+          typeof anyW.sentimentScore === "number"
+            ? anyW.sentimentScore
+            : 0,
+        topFlags: Array.isArray(anyW.topFlags)
+          ? anyW.topFlags.map((f: any) => String(f))
+          : [],
+      };
     } else {
-      // Real APIs, but fall back to mock on error
-      const [watsonRes, geminiRes] = await Promise.all([
-        runWatsonAnalysis(text).catch((err) => {
-          console.error("Watson error:", err);
-          return null;
-        }),
-        analyzeWithGemini(text, market, audience).catch((err) => {
-          console.error("Gemini error:", err);
-          return null;
-        })
-      ]);
-
-      if (watsonRes) {
-        const anyW = watsonRes as any;
-        watson = {
-          overallScore: safeNumber(
-            anyW.overallScore,
-            anyW.score ?? 60
-          ),
-          sentimentLabel:
-            anyW.sentimentLabel ?? anyW.label ?? "neutral",
-          sentimentScore: safeNumber(
-            anyW.sentimentScore,
-            anyW.sentiment ?? 0
-          ),
-          topFlags:
-            anyW.topFlags ??
-            anyW.flags ??
-            ["No explicit flags returned from Watson."]
-        };
-      }
-
-      if (geminiRes) {
-        const anyG = geminiRes as any;
-        gemini = {
-          overallScore: safeNumber(
-            anyG.overallScore,
-            anyG.combinedScore ?? anyG.score ?? 65
-          ),
-          culturalRiskSummary:
-            anyG.culturalRiskSummary ??
-            anyG.cultureSummary ??
-            "No cultural summary returned from Gemini.",
-          toneSummary:
-            anyG.toneSummary ??
-            anyG.tone ??
-            "No tone summary returned from Gemini.",
-          topRisks:
-            anyG.topRisks ??
-            anyG.risks ??
-            ["No explicit risks returned from Gemini."],
-          improvementIdeas:
-            anyG.improvementIdeas ??
-            anyG.suggestions ??
-            ["No improvement suggestions returned from Gemini."]
-        };
-      }
-
-      // If any side failed, drop back to mock for that side
-      if (!watson) {
-        watson = await mockWatson(text);
-      }
-      if (!gemini) {
-        gemini = await mockGemini(text);
-      }
+      watson = {
+        overallScore: 50,
+        sentimentLabel: "neutral",
+        sentimentScore: 0,
+        topFlags: [
+          "Watson analysis failed. Using safe neutral fallback.",
+        ],
+      };
     }
 
-    // Last safety: never leave them null
-    if (!watson) {
-      watson = await mockWatson(text || "fallback");
+    // Map Gemini result
+    let gemini: GeminiPayload;
+    if (geminiRaw) {
+      const anyG = geminiRaw as any;
+      const topRisks: string[] = Array.isArray(anyG.topRisks)
+        ? anyG.topRisks.map((r: any) => String(r))
+        : [];
+      const improvementIdeas: string[] = Array.isArray(
+        anyG.improvementIdeas
+      )
+        ? anyG.improvementIdeas.map((r: any) => String(r))
+        : [];
+
+      gemini = {
+        overallScore: clampScore(anyG.overallScore, 55),
+        culturalRiskSummary: String(
+          anyG.culturalRiskSummary ||
+            "No cultural risk summary was returned by the model."
+        ),
+        toneSummary: String(
+          anyG.toneSummary ||
+            "No tone-of-voice summary was returned by the model."
+        ),
+        topRisks:
+          topRisks.length > 0
+            ? topRisks
+            : [
+                "The model did not list explicit risks. Review manually for cultural and tone issues.",
+              ],
+        improvementIdeas:
+          improvementIdeas.length > 0
+            ? improvementIdeas
+            : [
+                "Clarify your value proposition and adapt examples to the local market.",
+              ],
+      };
+    } else {
+      gemini = {
+        overallScore: 55,
+        culturalRiskSummary:
+          "Cultural and localization analysis is running in fallback mode.",
+        toneSummary:
+          "Tone-of-voice analysis is running in fallback mode.",
+        topRisks: [
+          "Some claims may sound generic or not fully localized.",
+        ],
+        improvementIdeas: [
+          "Add market-specific details and reduce over-promising language.",
+        ],
+      };
     }
-    if (!gemini) {
-      gemini = await mockGemini(text || "fallback");
-    }
 
-    const overallScore = Math.round(
-      (safeNumber(watson.overallScore, 60) +
-        safeNumber(gemini.overallScore, 65)) /
-        2
-    );
-
-    const riskLevel: RiskLevel = getRiskLevel(overallScore);
-
-    const response: AnalysisResult = {
-      overallScore,
-      riskLevel,
-      watson,
-      gemini
-    };
-
-    return NextResponse.json(response);
-  } catch (err) {
-    console.error("Analyze API hard failure:", err);
-
-    const watson = await mockWatson(text || "fallback");
-    const gemini = await mockGemini(text || "fallback");
     const overallScore = Math.round(
       (watson.overallScore + gemini.overallScore) / 2
     );
-    const riskLevel: RiskLevel = getRiskLevel(overallScore);
+    const riskLevel = getRiskLevel(overallScore);
 
-    const response: AnalysisResult = {
+    const payload: AnalyzeResponse = {
       overallScore,
       riskLevel,
       watson,
-      gemini
+      gemini,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(payload);
+  } catch (err) {
+    console.error("[Analyze route] Fatal error:", err);
+    return NextResponse.json(
+      { error: "Unexpected error while analyzing the text." },
+      { status: 500 }
+    );
   }
 }
