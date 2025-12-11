@@ -7,31 +7,31 @@ const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
 const GEMINI_MODEL_ID =
-  process.env.GEMINI_MODEL_ID || process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  process.env.GEMINI_MODEL_ID || process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-export type GeminiAnalysis = {
-  overallScore: number;
-  culturalRiskSummary: string;
-  toneSummary: string;
-  topRisks: string[];
-  improvementIdeas: string[];
-};
-
-const FALLBACK_ANALYSIS: GeminiAnalysis = {
-  overallScore: 55,
-  culturalRiskSummary:
-    "Mock mode: cultural risk summary is generated locally until the Gemini API is configured or recovers.",
-  toneSummary:
-    "Mock mode: tone-of-voice analysis is simulated. Connect Gemini for real analysis.",
-  topRisks: [
-    "Potential over-promising language in marketing claims (mock).",
-    "Some phrases may sound generic and not tailored to the target market (mock).",
-  ],
-  improvementIdeas: [
-    "Add more market-specific details to sound tailored and credible.",
-    "Reduce absolute promises and keep benefits realistic.",
-  ],
-};
+  export type GeminiAnalysis = {
+    overallScore: number;
+    culturalRiskSummary: string;
+    toneSummary: string;
+    topRisks: string[];
+    improvementIdeas: string[];
+  };
+  
+  const FALLBACK_ANALYSIS: GeminiAnalysis = {
+    overallScore: 55,
+    culturalRiskSummary:
+      "Mock mode: cultural risk summary is generated locally until the Gemini API is configured or recovers.",
+    toneSummary:
+      "Mock mode: tone-of-voice analysis is simulated. Connect Gemini for real analysis.",
+    topRisks: [
+      "Potential over-promising language in marketing claims (mock).",
+      "Some phrases may sound generic and not tailored to the target market (mock).",
+    ],
+    improvementIdeas: [
+      "Add more market-specific details to sound tailored and credible.",
+      "Reduce absolute promises and keep benefits realistic.",
+    ],
+  };
 
 function buildPrompt(text: string, market?: string, audience?: string): string {
   const targetMarket = market?.trim() || "unspecified market";
