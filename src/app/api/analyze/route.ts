@@ -41,9 +41,9 @@ function clampScore(value: unknown, fallback: number): number {
 }
 
 function getRiskLevel(score: number): RiskLevel {
-  if (score < 40) return "low";
+  if (score < 40) return "high";
   if (score < 70) return "medium";
-  return "high";
+  return "low";
 }
 
 export async function POST(req: Request) {

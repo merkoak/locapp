@@ -68,7 +68,6 @@ export default function HomePage() {
   function handleLeadSubmit(e: FormEvent) {
     e.preventDefault();
     if (!email) return;
-    // TODO: connect to real lead API (Babil Agency)
     setLeadCaptured(true);
   }
 
@@ -89,8 +88,11 @@ export default function HomePage() {
             <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
             LocAI · Cultural risk radar
           </div>
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight bg-gradient-to-r from-fuchsia-200 via-cyan-100 to-violet-200 bg-clip-text text-transparent">
-            Audit your copy before culture does.
+          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
+            Audit your copy{" "}
+            <span className="bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_5px_rgba(255,255,255,0.25)]">
+              before culture does.
+            </span>
           </h1>
           <p className="text-sm md:text-lg text-slate-200/85 max-w-3xl mx-auto">
             Paste your English marketing or product copy. LocAI runs sentiment and
@@ -191,8 +193,7 @@ export default function HomePage() {
                 </button>
               </form>
               <p className="text-[10px] md:text-[11px] text-slate-300/85">
-                LocAI is your radar; Babil Agency is the response team when the
-                risk is real.
+                LocAI is your radar; Babil Agency is the human solution.
               </p>
             </div>
           </aside>
@@ -200,10 +201,10 @@ export default function HomePage() {
 
         {/* Results */}
         {data && (
-          <section className="space-y-5 md:space-y-6">
+          <section className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Overall banner */}
             <div
-              className={`relative rounded-3xl border px-4 py-4 md:px-7 md:py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] ${
+              className={`relative rounded-3xl border px-5 py-5 md:px-8 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-8 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] ${
                 hasCriticalRisk
                   ? "border-rose-500/70 bg-gradient-to-r from-rose-900/85 via-rose-950/95 to-slate-950/95"
                   : data.riskLevel === "medium"
@@ -211,18 +212,18 @@ export default function HomePage() {
                   : "border-emerald-400/70 bg-gradient-to-r from-emerald-900/85 via-slate-950/95 to-slate-950/95"
               }`}
             >
-              <div className="flex flex-col gap-1.5 md:gap-2">
-                <span className="text-[11px] md:text-xs uppercase tracking-[0.2em] text-slate-300/85">
+              <div className="flex flex-col gap-2 md:gap-3">
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300/85">
                   Overall cultural safety score
                 </span>
-                <div className="flex items-baseline gap-2 md:gap-3">
-                  <span className="text-3xl md:text-4xl font-semibold text-slate-50">
+                <div className="flex items-baseline gap-3 md:gap-4">
+                  <span className="text-4xl md:text-5xl font-bold text-slate-50">
                     {data.overallScore}
                   </span>
-                  <span className="text-xs md:text-sm uppercase tracking-wide text-slate-200/90">
+                  <span className="text-sm md:text-base uppercase tracking-wide text-slate-200/90">
                     / 100
                   </span>
-                  <span className="text-[11px] md:text-xs px-3 py-1 rounded-full border border-white/45 bg-black/40 text-slate-50">
+                  <span className="text-xs md:text-sm px-3 py-1 rounded-full border border-white/45 bg-black/40 text-slate-50 font-medium">
                     {data.riskLevel === "low"
                       ? "Low risk"
                       : data.riskLevel === "medium"
@@ -230,156 +231,202 @@ export default function HomePage() {
                       : "Critical risk"}
                   </span>
                 </div>
-                {hasCriticalRisk ? (
-                  <p className="text-xs md:text-sm max-w-2xl text-slate-100/90">
-                    LocAI detects critical cultural or tonal risks. We strongly
-                    recommend urgent human review. Babil Agency can redesign this
-                    message before it reaches your audience.
-                  </p>
-                ) : data.riskLevel === "medium" ? (
-                  <p className="text-xs md:text-sm max-w-2xl text-slate-100/90">
-                    Your copy is usable but carries noticeable risks. A focused
-                    localization pass can unlock safer, higher-conversion
-                    messaging for your key markets.
-                  </p>
-                ) : (
-                  <p className="text-xs md:text-sm max-w-2xl text-slate-100/90">
-                    Your copy looks relatively safe. You can still localize it for
-                    stronger resonance, higher trust, and better performance.
-                  </p>
-                )}
+                
+                <div className="text-sm md:text-base max-w-2xl text-slate-100/95 leading-relaxed">
+                  {hasCriticalRisk ? (
+                    <p>
+                      LocAI detects <strong>critical cultural or tonal risks</strong>. We strongly
+                      recommend urgent human review. Babil Agency can redesign this
+                      message before it reaches your audience.
+                    </p>
+                  ) : data.riskLevel === "medium" ? (
+                    <p>
+                      Your copy is usable but carries <strong>noticeable risks</strong>. A focused
+                      localization pass can unlock safer, higher-conversion
+                      messaging for your key markets.
+                    </p>
+                  ) : (
+                    <p>
+                      Your copy looks relatively safe. You can still localize it for
+                      stronger resonance, higher trust, and better performance.
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1.5 text-right">
+              <div className="flex flex-col items-end gap-2 text-right">
                 {hasCriticalRisk && (
                   <a
-                    href="https://babil.com"
-                    className="inline-flex items-center justify-center rounded-2xl px-4 md:px-5 py-2 text-xs md:text-sm font-semibold bg-gradient-to-r from-rose-500 via-amber-400 to-rose-400 hover:from-rose-400 hover:via-amber-300 hover:to-rose-300 shadow-[0_14px_40px_rgba(248,113,113,0.85)]"
+                    href="https://babiltr.com"
+                    className="inline-flex items-center justify-center rounded-2xl px-5 md:px-6 py-2.5 text-sm md:text-base font-bold bg-gradient-to-r from-rose-500 via-amber-400 to-rose-400 hover:from-rose-400 hover:via-amber-300 hover:to-rose-300 shadow-[0_14px_40px_rgba(248,113,113,0.85)] transition-transform active:scale-95"
                   >
                     Urgent: Talk to Babil Agency
                   </a>
                 )}
                 {!hasCriticalRisk && (
                   <a
-                    href="https://babil.com"
-                    className="inline-flex items-center justify-center rounded-2xl px-4 md:px-5 py-2 text-xs md:text-sm font-semibold bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 hover:from-fuchsia-400 hover:via-violet-400 hover:to-cyan-300 shadow-[0_14px_40px_rgba(59,130,246,0.75)]"
+                    href="https://babiltr.com"
+                    className="inline-flex items-center justify-center rounded-2xl px-5 md:px-6 py-2.5 text-sm md:text-base font-bold bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 hover:from-fuchsia-400 hover:via-violet-400 hover:to-cyan-300 shadow-[0_14px_40px_rgba(59,130,246,0.75)] transition-transform active:scale-95"
                   >
                     Improve with Babil Agency
                   </a>
                 )}
-                <span className="text-[10px] md:text-[11px] text-slate-200/85">
+                <span className="text-xs text-slate-300/85">
                   LocAI is a risk radar. Babil Agency is the human solution.
                 </span>
               </div>
             </div>
 
-            {/* Two result cards */}
-            <div className="grid gap-5 md:grid-cols-2">
+            {/* Two result cards - STACKED VERTICALLY */}
+            {/* grid-cols-1 yaparak alt alta aldık */}
+            <div className="grid gap-6 grid-cols-1">
+              
               {/* Sentiment card */}
-              <div className="relative">
-                <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-sky-500/35 via-indigo-500/35 to-fuchsia-500/35 opacity-80 blur-[3px]" />
-                <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-4 md:p-6 flex flex-col gap-3.5 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
-                  <div className="flex items-center justify-between gap-2">
+              <div className="relative group">
+                <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-sky-500/35 via-indigo-500/35 to-fuchsia-500/35 opacity-80 blur-[3px] group-hover:opacity-100 transition-opacity" />
+                <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-5 md:p-7 flex flex-col gap-6 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
+                  
+                  {/* Başlık ve Skor - SAĞ ÜSTTE */}
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm md:text-base font-semibold text-slate-50">
-                        Sentiment analysis
-                      </h3>
-                      <p className="text-[11px] md:text-xs text-slate-300/90">
-                        Emotional charge, polarity and over-promising risk.
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-slate-50">
+                          Sentiment analysis
+                        </h3>
+                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-900/90 border border-white/18 text-slate-300">
+                          Analytical
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300/90 max-w-lg">
+                        Emotional charge & polarity. Detects if your message sounds too aggressive, negative, or overly enthusiastic.
                       </p>
                     </div>
+
+                    {/* Skor ve Etiket Sağda */}
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-[10px] md:text-[11px] px-2 py-0.5 rounded-full bg-slate-900/90 border border-white/18 text-slate-100">
-                        Analytical
+                      <div className="flex items-baseline gap-2 text-sky-300">
+                        <span className="text-4xl font-bold">
+                          {data.watson?.overallScore ?? "–"}
+                        </span>
+                        <span className="text-sm uppercase tracking-wide opacity-80">
+                          / 100
+                        </span>
+                      </div>
+                      {/* Sentiment Label'ı buraya taşıdık */}
+                      <span className="text-xs font-medium uppercase tracking-widest text-sky-200/80">
+                        {data.watson?.sentimentLabel ?? "n/a"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-baseline gap-2 text-sky-300">
-                    <span className="text-2xl md:text-3xl font-semibold">
-                      {data.watson?.overallScore ?? "–"}
-                    </span>
-                    <span className="text-xs md:text-sm uppercase tracking-wide">
-                      / 100
-                    </span>
+                  {/* Bar ve Flags */}
+                  <div className="space-y-2">
+                    {/* Etiketi buradan sildik, yukarıya taşıdık */}
+                    <div className="text-xs uppercase tracking-wider text-slate-400">
+                        Sentiment Spectrum
+                    </div>
+                    
+                    {/* Sentiment Spectrum Bar - Full Width */}
+                    <div className="relative h-3 w-full rounded-full bg-slate-800/50 shadow-inner mt-1">
+                       <div className="absolute inset-0 rounded-full bg-gradient-to-r from-rose-500/80 via-slate-400/50 to-emerald-500/80" />
+                       <div 
+                         className="absolute top-1/2 -mt-2 h-4 w-4 -translate-x-1/2 rounded-full border-[2px] border-white bg-slate-100 shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-1000 ease-out"
+                         style={{ 
+                           left: `${Math.min(Math.max(data.watson?.overallScore || 0, 0), 100)}%` 
+                         }}
+                       />
+                    </div>
+                    <div className="flex justify-between text-[10px] uppercase tracking-widest text-slate-500/80 font-medium pt-1">
+                         <span>Negative</span>
+                         <span>Neutral</span>
+                         <span>Positive</span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 text-[11px] md:text-xs">
-                    <div className="space-y-1.5">
-                      <div className="text-slate-300/95">Sentiment</div>
-                      <div className="inline-flex px-2.5 py-1 rounded-full bg-slate-900/85 border border-white/18 text-slate-100 text-[11px] md:text-xs">
-                        {data.watson?.sentimentLabel ?? "n/a"}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="text-slate-300/95">Flags</div>
-                      <ul className="space-y-1 list-disc list-inside text-slate-100/90">
-                        {(data.watson?.topFlags ||
-                          ["No major sentiment issues detected."]).map(
-                          (flag: string, idx: number) => (
-                            <li key={idx}>{flag}</li>
-                          )
-                        )}
-                      </ul>
-                    </div>
+                  {/* Flags */}
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Flags</div>
+                    <ul className="space-y-2 list-disc list-inside text-slate-100/90 leading-relaxed text-sm">
+                      {(data.watson?.topFlags ||
+                        ["No major sentiment issues detected."]).map(
+                        (flag: string, idx: number) => (
+                          <li key={idx}>{flag}</li>
+                        )
+                      )}
+                    </ul>
                   </div>
                 </div>
               </div>
 
               {/* Cultural card */}
-              <div className="relative">
-                <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-fuchsia-500/35 via-violet-500/35 to-cyan-400/35 opacity-80 blur-[3px]" />
-                <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-4 md:p-6 flex flex-col gap-3.5 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
-                  <div className="flex items-center justify-between gap-2">
+              <div className="relative group">
+                <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-fuchsia-500/35 via-violet-500/35 to-cyan-400/35 opacity-80 blur-[3px] group-hover:opacity-100 transition-opacity" />
+                <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-5 md:p-7 flex flex-col gap-6 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
+                  
+                  {/* Başlık ve Skor - SAĞ ÜSTTE */}
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-1">
-                      <h3 className="text-sm md:text-base font-semibold text-slate-50">
-                        Cultural analysis
-                      </h3>
-                      <p className="text-[11px] md:text-xs text-slate-300/90">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-slate-50">
+                          Cultural analysis
+                        </h3>
+                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-900/90 border border-white/18 text-slate-300">
+                          Cultural
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300/90 max-w-lg">
                         Taboos, cultural fit, tone-of-voice and context.
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-[10px] md:text-[11px] px-2 py-0.5 rounded-full bg-slate-900/90 border border-white/18 text-slate-100">
-                        Cultural
+                    
+                    {/* Skor Sağda */}
+                    <div className="flex items-baseline gap-2 text-emerald-300">
+                      <span className="text-4xl font-bold">
+                        {data.gemini?.overallScore ?? "–"}
+                      </span>
+                      <span className="text-sm uppercase tracking-wide opacity-80">
+                        / 100
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-baseline gap-2 text-emerald-300">
-                    <span className="text-2xl md:text-3xl font-semibold">
-                      {data.gemini?.overallScore ?? "–"}
-                    </span>
-                    <span className="text-xs md:text-sm uppercase tracking-wide">
-                      / 100
-                    </span>
-                  </div>
-
-                  <div className="space-y-2.5 text-[11px] md:text-xs text-slate-100/90">
+                  <div className="space-y-6 text-sm md:text-base text-slate-100/95 leading-relaxed">
                     <div>
-                      <div className="text-slate-300/95 mb-0.5">
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">
                         Cultural risk
                       </div>
-                      <p>
+                      <p className="font-medium text-slate-50">
                         {data.gemini?.culturalRiskSummary ??
                           "Summary not available."}
                       </p>
                     </div>
 
                     <div>
-                      <div className="text-slate-300/95 mb-0.5">Tone of voice</div>
-                      <p>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Tone of voice</div>
+                      <p className="text-slate-200">
                         {data.gemini?.toneSummary ?? "Summary not available."}
                       </p>
                     </div>
 
                     <div>
-                      <div className="text-slate-300/95 mb-0.5">Top risks</div>
-                      <ul className="space-y-1 list-disc list-inside">
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Top risks</div>
+                      <ul className="space-y-2 list-disc list-inside text-rose-100/90">
                         {(data.gemini?.topRisks ||
                           ["No major cultural risks detected."]).map(
                           (risk: string, idx: number) => (
                             <li key={idx}>{risk}</li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Improvement Ideas</div>
+                      <ul className="space-y-2 list-disc list-inside text-emerald-100/90">
+                        {(data.gemini?.improvementIdeas ||
+                          ["Review content for general clarity."]).map(
+                          (idea: string, idx: number) => (
+                            <li key={idx}>{idea}</li>
                           )
                         )}
                       </ul>
@@ -397,11 +444,11 @@ export default function HomePage() {
           <span className="flex items-center gap-1.5">
             <span>Powered by</span>
             <span className="font-medium text-slate-200">
-              IBM Watson (sentiment)
+              IBM Watson
             </span>
             <span>·</span>
             <span className="font-medium text-slate-200">
-              Google Gemini (cultural)
+              Google Gemini
             </span>
           </span>
         </footer>
