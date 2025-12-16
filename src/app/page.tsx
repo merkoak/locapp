@@ -84,16 +84,27 @@ export default function HomePage() {
       <div className="relative w-full max-w-6xl space-y-9">
         {/* Hero */}
         <header className="flex flex-col gap-4 text-center">
-        <img
-  src="/locai-logo.svg"
-  alt="LocAI"
-  className="h-20 md:h-24 w-auto object-contain block"
-  style={{
-    filter:
-      "drop-shadow(0 0 8px rgba(255,255,255,0.30)) drop-shadow(0 0 24px rgba(255,255,255,0.12))",
-  }}  
-  
-/>
+        <div className="flex justify-center">
+  <div className="relative">
+    <img
+      src="/locai-logo.svg"
+      alt=""
+      aria-hidden="true"
+      className="absolute inset-0 h-20 md:h-24 w-auto object-contain block opacity-35 blur-[14px]"
+      style={{ mixBlendMode: "screen" }}
+      draggable={false}
+    />
+    <img
+      src="/locai-logo.svg"
+      alt="LocAI"
+      className="relative h-20 md:h-24 w-auto object-contain block"
+      draggable={false}
+    />
+  </div>
+</div>
+
+
+
 
 
 <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
