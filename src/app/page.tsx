@@ -84,13 +84,12 @@ export default function HomePage() {
       <div className="relative w-full max-w-6xl space-y-9">
         {/* Hero */}
         <header className="flex flex-col gap-4 text-center">
-        <div className="mb-6 flex justify-center md:justify-start">
-  <img
-    src="/locai-logo.svg"
-    alt="LocAI"
-    className="h-16 md:h-20 w-auto object-contain"
-  />
-</div>
+        <img
+  src="/locai-logo.svg"
+  alt="LocAI"
+  className="h-20 md:h-24 w-auto object-contain block"
+  style={{ filter: "drop-shadow(0 0 18px rgba(255,255,255,0.18))" }}
+/>
 
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
             Audit your copy{" "}
