@@ -95,7 +95,7 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="text-sm md:text-lg text-slate-200/85 max-w-3xl mx-auto">
-            Paste your English marketing or product copy. LocAI runs sentiment and
+            Paste your marketing or product copy. LocAI runs sentiment and
             cultural analysis in parallel and flags risks before your launch hits
             the wrong nerve.
           </p>

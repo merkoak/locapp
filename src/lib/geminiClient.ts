@@ -20,16 +20,14 @@ export type GeminiAnalysis = {
 const FALLBACK_ANALYSIS: GeminiAnalysis = {
   overallScore: 55,
   culturalRiskSummary:
-    "Mock mode: cultural risk summary is generated locally until the Gemini API is configured or recovers.",
+    "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
   toneSummary:
-    "Mock mode: tone-of-voice analysis is simulated. Connect Gemini for real analysis.",
+    "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
   topRisks: [
-    "Potential over-promising language in marketing claims (mock).",
-    "Some phrases may sound generic and not tailored to the target market (mock).",
+    "Gemini analysis is temporarily unavailable due to rate limits.",
   ],
   improvementIdeas: [
-    "Add more market-specific details to sound tailored and credible.",
-    "Reduce absolute promises and keep benefits realistic.",
+    "Please try again later.",
   ],
 };
 

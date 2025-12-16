@@ -82,9 +82,9 @@ export async function POST(req: Request) {
       })(),
       (async () => {
         try {
-          // note: our runGeminiAnalysis currently only takes text
-          // if you later extend it with market/audience, add them here
-          geminiRaw = await runGeminiAnalysis(text);
+          
+          geminiRaw = await runGeminiAnalysis(text, market, audience);
+
         } catch (err) {
           console.error("[Gemini] route error:", err);
         }
@@ -157,15 +157,16 @@ export async function POST(req: Request) {
       gemini = {
         overallScore: 55,
         culturalRiskSummary:
-          "Cultural and localization analysis is running in fallback mode.",
-        toneSummary:
-          "Tone-of-voice analysis is running in fallback mode.",
-        topRisks: [
-          "Some claims may sound generic or not fully localized.",
-        ],
-        improvementIdeas: [
-          "Add market-specific details and reduce over-promising language.",
-        ],
+        "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
+      toneSummary:
+        "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
+      topRisks: [
+        "Gemini analysis is temporarily unavailable due to free-tier rate limits.",
+      ],
+      improvementIdeas: [
+        "Please try again later.",
+      ],
+      
       };
     }
 
