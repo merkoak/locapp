@@ -88,15 +88,23 @@ export default function HomePage() {
   src="/locai-logo.svg"
   alt="LocAI"
   className="h-20 md:h-24 w-auto object-contain block"
-  style={{ filter: "drop-shadow(0 0 18px rgba(255,255,255,0.18))" }}
+  style={{
+    filter:
+      "drop-shadow(0 0 8px rgba(255,255,255,0.30)) drop-shadow(0 0 24px rgba(255,255,255,0.12))",
+  }}  
+  
 />
 
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
-            Audit your copy{" "}
-            <span className="bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_5px_rgba(255,255,255,0.25)]">
-              before culture does.
-            </span>
-          </h1>
+
+<h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
+  Audit your copy{" "}
+  <span className="text-slate-100">before </span>
+  <span className="bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_5px_rgba(255,255,255,0.25)]">
+    culture
+  </span>
+  <span className="text-slate-100"> does.</span>
+</h1>
+
           <p className="text-sm md:text-lg text-slate-200/85 max-w-3xl mx-auto">
             Paste your marketing or product copy. LocAI runs sentiment and
             cultural analysis in parallel and flags risks before your launch hits
