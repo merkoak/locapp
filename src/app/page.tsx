@@ -84,10 +84,14 @@ export default function HomePage() {
       <div className="relative w-full max-w-6xl space-y-9">
         {/* Hero */}
         <header className="flex flex-col gap-4 text-center">
-          <div className="inline-flex items-center justify-center gap-2 mx-auto rounded-full border border-fuchsia-400/40 bg-white/10 px-4 py-1.5 text-[11px] md:text-xs uppercase tracking-[0.18em] text-fuchsia-100/90 shadow-[0_0_28px_rgba(236,72,153,0.4)] backdrop-blur-xl">
-            <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
-            LocAI · Cultural risk radar
-          </div>
+        <div className="mb-6 flex justify-center md:justify-start">
+  <img
+    src="/locai-logo.svg"
+    alt="LocAI"
+    className="h-16 md:h-20 w-auto object-contain"
+  />
+</div>
+
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-slate-100">
             Audit your copy{" "}
             <span className="bg-gradient-to-r from-fuchsia-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_5px_rgba(255,255,255,0.25)]">
@@ -113,7 +117,7 @@ export default function HomePage() {
               </label>
               <textarea
                 className="w-full min-h-[200px] rounded-2xl bg-slate-900/70 border border-white/12 px-3.5 py-3 text-sm md:text-base outline-none focus:ring-2 focus:ring-fuchsia-500/80 focus:border-fuchsia-400/80 resize-vertical placeholder:text-slate-500/80 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-                placeholder="Paste your English copy here..."
+                placeholder="Paste your copy here..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />

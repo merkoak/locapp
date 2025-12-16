@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="katman_1" data-name="katman 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 600">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#Adsız_degrade_818);
+      }
+
+      .cls-2 {
+        letter-spacing: -.05em;
+      }
+
+      .cls-3 {
+        font-family: Teknaf-Regular, Teknaf;
+        font-size: 431.26px;
+      }
+    </style>
+    <linearGradient id="Adsız_degrade_818" data-name="Adsız degrade 818" x1="35.59" y1="293.34" x2="764.34" y2="293.34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4800bf"/>
+      <stop offset=".11" stop-color="#6516ca"/>
+      <stop offset=".33" stop-color="#943bdd"/>
+      <stop offset=".53" stop-color="#ba58eb"/>
+      <stop offset=".71" stop-color="#d56df6"/>
+      <stop offset=".87" stop-color="#e67afc"/>
+      <stop offset="1" stop-color="#ec7fff"/>
+    </linearGradient>
+  </defs>
+  <text class="cls-3" transform="translate(24.81 435.52)"><tspan x="0" y="0">lo</tspan><tspan class="cls-2" x="263.06" y="0">c</tspan><tspan x="448.07" y="0">AI</tspan></text>
+  <g>
+    <path class="cls-1" d="M35.59,151.16h31.84v284.36h-31.84V151.16Z"/>
+    <path class="cls-1" d="M165.98,435.53c-42.41,0-76.92-34.51-76.92-76.92v-52.95c0-42.42,34.51-76.93,76.92-76.93h33.98c42.41,0,76.92,34.51,76.92,76.93v52.95c0,42.41-34.51,76.92-76.92,76.92h-33.98ZM120.88,305.66v52.95c0,24.87,20.23,45.1,45.1,45.1h33.98c24.87,0,45.1-20.23,45.1-45.1v-52.95c0-24.87-20.23-45.11-45.1-45.11h-33.98c-24.87,0-45.1,20.24-45.1,45.11Z"/>
+    <path class="cls-1" d="M409.52,403.71c22.43,0,41.04-16.55,44.38-38.02l29.59,13.21c-8.75,32.61-38.65,56.63-73.96,56.63h-34.04c-42.47,0-76.83-34.52-76.83-76.83v-52.97c0-42.47,34.36-76.99,76.83-76.99h34.04c35.47,0,65.53,24.34,74.12,57.11l-29.59,13.05c-3.34-21.63-22.11-38.33-44.54-38.33h-34.04c-24.82,0-45.02,20.36-45.02,45.17v52.97c0,24.82,20.2,45.02,45.02,45.02h34.04Z"/>
+    <path class="cls-1" d="M710.87,435.53h-33.28l-31-106.74c-1.26-4.33-6.17-6.41-10.15-4.31l-80.46,42.42c-14.47,7.63-25.23,20.8-29.82,36.51l-9.38,32.11h-33.12l82.79-284.36h61.62l82.79,284.36ZM546.04,336.82c-.68,2.35,1.57,4.48,3.88,3.67l82.8-26.25c4.52-1.58,7-6.42,5.67-11.01l-41.19-144.12-51.15,177.7h0Z"/>
+    <path class="cls-1" d="M732.5,151.16h31.84v284.36h-31.84V151.16Z"/>
+  </g>
+</svg>
