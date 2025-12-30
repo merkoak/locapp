@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 
 type AnalyzeResponse = {
   overallScore: number;
@@ -185,7 +186,7 @@ export default function HomePage() {
           {/* Lead capture */}
           <aside className="relative">
             <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-violet-500/60 via-fuchsia-500/45 to-cyan-400/50 opacity-80 blur-[3px]" />
-            <div className="relative rounded-[26px] border border-white/18 bg-slate-950/70 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] px-4 py-5 md:px-6 md:py-6 flex flex-col gap-4">
+            <div className="relative rounded-[26px] border border-white/18 bg-slate-950/70 bg-clip-padding shadow-[0_20px_60px_rgba(15,23,42,0.95)] px-4 py-5 md:px-6 md:py-6 flex flex-col gap-4">
               <h2 className="text-sm md:text-base font-semibold tracking-tight text-slate-50">
                 Full report unlock
               </h2>
@@ -220,6 +221,198 @@ export default function HomePage() {
             </div>
           </aside>
         </section>
+{/* Learn / SEO content (inserted between the input section and results) */}
+<section className="space-y-6">
+  {/* Quick links (same palette, minimal) */}
+  <div className="flex flex-wrap justify-center gap-3 text-xs md:text-sm text-slate-200/85">
+    <Link
+      href="/use-cases/saas"
+      className="underline decoration-white/30 hover:decoration-white/60"
+    >
+      Use cases
+    </Link>
+    <span className="opacity-40">·</span>
+    <Link
+      href="/glossary/localization-vs-translation"
+      className="underline decoration-white/30 hover:decoration-white/60"
+    >
+      Glossary
+    </Link>
+    <span className="opacity-40">·</span>
+    <Link
+      href="/localization-risk"
+      className="underline decoration-white/30 hover:decoration-white/60"
+    >
+      Localization risk
+    </Link>
+    <span className="opacity-40">·</span>
+    <Link
+      href="/cultural-tone-analysis"
+      className="underline decoration-white/30 hover:decoration-white/60"
+    >
+      Cultural tone
+    </Link>
+    <span className="opacity-40">·</span>
+    <Link
+      href="/privacy"
+      className="underline decoration-white/30 hover:decoration-white/60"
+    >
+      Privacy
+    </Link>
+  </div>
+
+  {/* Cards (unified palette, clickable + stronger hover) */}
+<div className="grid gap-5 md:grid-cols-3">
+  {[
+    {
+      title: "Use cases",
+      desc: "Real situations where copy is technically correct but culturally risky. LoCAl highlights tone, expectation, and trust issues before content goes live.",
+      href: "/use-cases/saas",
+    },
+    {
+      title: "Glossary",
+      desc: "Clear definitions for localization, translation, and localization risk — explaining how cultural tone and market expectations affect meaning and trust.",
+      href: "/glossary/localization-vs-translation",
+    },
+    {
+      title: "Why this matters",
+      desc: "Even accurate translations can fail when tone and expectations don’t match the local market, leading to mistrust and lower conversion.",
+      href: "/localization-risk",
+    },
+  ].map((c) => {
+    const isUseCases = c.title === "Use cases";
+
+    const glowClass = isUseCases
+      ? "bg-gradient-to-br from-cyan-400/45 via-sky-500/30 to-indigo-400/25"
+      : "bg-gradient-to-br from-fuchsia-500/35 via-violet-500/30 to-cyan-400/30";
+
+    const innerTint = isUseCases
+      ? "bg-gradient-to-br from-cyan-400/12 via-transparent to-sky-400/10"
+      : "bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-400/10";
+
+    return (
+      <Link
+        key={c.title}
+        href={c.href}
+        aria-label={`Open ${c.title}`}
+        className="relative rounded-3xl group block transition-all duration-300 hover:-translate-y-[2px] hover:scale-[1.01]"
+      >
+        {/* outer glow */}
+        <div
+          className={`absolute inset-[1px] rounded-[26px] ${glowClass} opacity-60 blur-[3px] group-hover:opacity-90 group-hover:blur-[4px] transition-all duration-300`}
+        />
+
+        {/* card surface */}
+        <div className="relative rounded-[26px] border border-white/18 bg-slate-950/70 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] p-5 md:p-6 overflow-hidden">
+          {/* inner tint */}
+          <div
+            className={`pointer-events-none absolute inset-0 rounded-[26px] ${innerTint} opacity-70`}
+          />
+
+          {/* subtle hover light */}
+          <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-white/0 group-hover:bg-white/5 transition-colors duration-300" />
+
+          <div className="relative z-10 flex items-center justify-between gap-3">
+            <h2 className="text-sm md:text-base font-semibold tracking-tight text-slate-50 group-hover:text-white transition-colors">
+              {c.title}
+            </h2>
+            <span className="text-[11px] md:text-xs font-medium text-slate-200/80 group-hover:text-slate-100 transition-colors">
+              Open
+            </span>
+          </div>
+
+          <p className="relative z-10 mt-2 text-xs md:text-sm text-slate-200/85 group-hover:text-slate-100 transition-colors leading-relaxed">
+            {c.desc}
+          </p>
+        </div>
+      </Link>
+    );
+  })}
+</div>
+
+
+  {/* Example output (sample) */}
+<div className="relative rounded-3xl overflow-hidden">
+  {/* Fake border */}
+  <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-fuchsia-400/30 via-violet-400/30 to-sky-400/30" />
+
+  {/* Card body */}
+  <div className="relative m-[1px] rounded-[22px] bg-slate-950/70 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.9)] p-5 md:p-7 space-y-3">
+    <h2 className="text-sm md:text-base font-semibold tracking-tight text-slate-50">
+    Example output
+    </h2>
+
+    <div className="text-xs md:text-sm text-slate-200/85 leading-relaxed space-y-1">
+      <p>
+        <span className="font-semibold text-slate-100">Overall risk:</span>{" "}
+        Medium (58/100) 
+        The message is clear, but the tone may feel overconfident for the selected market.
+      </p>
+      <p>
+        <span className="font-semibold text-slate-100">Top risks:</span>{" "}
+        An overconfident promise, urgency cues that may reduce trust, and a formality level that does not match audience expectations.
+      </p>
+      <p>
+        <span className="font-semibold text-slate-100">Safer rewrite idea:</span>{" "}
+        “Get started in minutes” → “Get started quickly, with clear steps and local expectations in mind.”
+      </p>
+      <p className="opacity-80">
+      Expert note: This is an automated first-pass audit. For high-stakes markets, human localization review is still recommended.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+  {/* FAQ (unchanged) */}
+  <div className="relative rounded-3xl group">
+    <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-fuchsia-500/22 via-violet-500/18 to-cyan-400/18 opacity-70 blur-[3px] group-hover:opacity-90 transition-opacity" />
+    <div className="relative rounded-[26px] border border-white/18 bg-slate-950/70 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] p-5 md:p-7">
+      <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-400/10 opacity-60" />
+
+      <h2 className="relative text-sm md:text-base font-semibold tracking-tight text-slate-50 mb-3">
+        FAQ
+      </h2>
+
+      <div className="relative space-y-3 text-xs md:text-sm">
+        {[
+          {
+            q: "Is LocAI a translation or localization tool?",
+            a: "No. LocAI is a localization risk analysis tool. It does not translate text — it audits cultural tone, expectations, and potential trust issues in existing copy.",
+          },
+          {
+            q: "What is localization risk in marketing content?",
+            a: "Localization risk occurs when content is linguistically correct but culturally misaligned, causing confusion, mistrust, or lower conversion in local markets.",
+          },
+          {
+            q: "Who should use a localization audit tool like LocAI?",
+            a: "Product teams, marketers, SaaS founders, and localization managers who publish customer-facing content across different markets.",
+          },
+          {
+            q: "Can AI detect cultural and tone issues accurately?",
+            a: "AI can flag common tone, sentiment, and expectation mismatches at scale. For high-risk launches, LocAI works best as a first-pass before human localization review.",
+          },  {
+            q: "Is LocAI free to use?",
+            a: "Yes. The core localization risk audit is free. Advanced insights and human localization support are available through Babil Agency.",
+          },
+        ].map((f) => (
+          <details
+            key={f.q}
+            className="rounded-2xl border border-white/10 bg-slate-900/35 overflow-hidden"
+          >
+            <summary className="cursor-pointer list-none px-4 py-4 flex items-center justify-between gap-4 text-slate-100">
+              <span className="font-medium">{f.q}</span>
+              <span className="text-slate-400">▾</span>
+            </summary>
+            <div className="px-4 pb-4">
+              <p className="text-slate-200/85 leading-relaxed">{f.a}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
 
         {/* Results */}
         {data && (
