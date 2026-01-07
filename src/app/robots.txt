@@ -23,6 +23,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://locai.ai/sitemap.xml",
+    sitemap: "https://locapp.ai/sitemap.xml",
   };
 }

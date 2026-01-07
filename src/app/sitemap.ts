@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://locai.ai";
+  const baseUrl = "https://locapp.ai";
 
   return [
     {
