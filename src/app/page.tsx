@@ -226,14 +226,14 @@ export default function HomePage() {
   {/* Quick links (same palette, minimal) */}
   <div className="flex flex-wrap justify-center gap-3 text-xs md:text-sm text-slate-200/85">
     <Link
-      href="/use-cases/saas"
+      href="/use-cases"
       className="underline decoration-white/30 hover:decoration-white/60"
     >
       Use cases
     </Link>
     <span className="opacity-40">·</span>
     <Link
-      href="/glossary/localization-vs-translation"
+      href="/glossary/"
       className="underline decoration-white/30 hover:decoration-white/60"
     >
       Glossary
@@ -267,12 +267,12 @@ export default function HomePage() {
     {
       title: "Use cases",
       desc: "Real situations where copy is technically correct but culturally risky. LoCAl highlights tone, expectation, and trust issues before content goes live.",
-      href: "/use-cases/saas",
+      href: "/use-cases",
     },
     {
       title: "Glossary",
       desc: "Clear definitions for localization, translation, and localization risk — explaining how cultural tone and market expectations affect meaning and trust.",
-      href: "/glossary/localization-vs-translation",
+      href: "/glossary",
     },
     {
       title: "Why this matters",
