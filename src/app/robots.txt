@@ -1,0 +1,28 @@
+import { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: "*",
+        allow: [
+          "/",
+          "/use-cases",
+          "/use-cases/",
+          "/glossary",
+          "/glossary/",
+          "/localization-risk",
+        ],
+        disallow: [
+          "/api/",
+          "/analyze",
+          "/analyze/",
+          "/_next/",
+          "/dashboard",
+          "/dashboard/",
+        ],
+      },
+    ],
+    sitemap: "https://locai.ai/sitemap.xml",
+  };
+}
