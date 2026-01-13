@@ -226,10 +226,10 @@ export default function HomePage() {
   {/* Quick links (same palette, minimal) */}
   <div className="flex flex-wrap justify-center gap-3 text-xs md:text-sm text-slate-200/85">
     <Link
-      href="/use-cases"
+      href="/articles"
       className="underline decoration-white/30 hover:decoration-white/60"
     >
-      Use cases
+      Articles
     </Link>
     <span className="opacity-40">·</span>
     <Link
@@ -243,7 +243,7 @@ export default function HomePage() {
       href="/localization-risk"
       className="underline decoration-white/30 hover:decoration-white/60"
     >
-      Localization risk
+      Localization Risk
     </Link>
     <span className="opacity-40">·</span>
     <Link
