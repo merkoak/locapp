@@ -1,3 +1,5 @@
+import { calculateOverallScore } from "@/lib/criticalTranslation";
+import type { CriticalTranslationIssue } from "@/lib/criticalTranslation";
 // src/app/api/analyze/route.ts
 // LocApp AI analyze endpoint – combines Watson + Gemini.
 // ASCII-only.
@@ -6,11 +8,15 @@ import { NextResponse } from "next/server";
 import { runWatsonAnalysis, WatsonResult } from "@/lib/ibmWatson";
 import { runGeminiAnalysis, GeminiAnalysis } from "@/lib/geminiClient";
 
+import { UnanalyzableTextError } from "@/lib/geminiScore";
+
 export const runtime = "nodejs";
 
 type RiskLevel = "low" | "medium" | "high";
 
 type WatsonPayload = {
+  status?: "available" | "unavailable";
+  language?: string;
   overallScore: number;
   sentimentLabel: string;
   sentimentScore: number;
@@ -18,6 +24,12 @@ type WatsonPayload = {
 };
 
 type GeminiPayload = {
+  criticalIssues?: CriticalTranslationIssue[];
+  contextSummary?: string;
+  localizationSummary?: string;
+  threatLevel?: string;
+  threatSummary?: string;
+  scoreReason?: string;
   overallScore: number;
   culturalRiskSummary: string;
   toneSummary: string;
@@ -82,10 +94,11 @@ export async function POST(req: Request) {
       })(),
       (async () => {
         try {
-          
+
           geminiRaw = await runGeminiAnalysis(text, market, audience);
 
         } catch (err) {
+          if (err instanceof UnanalyzableTextError) throw err;
           console.error("[Gemini] route error:", err);
         }
       })(),
@@ -96,6 +109,8 @@ export async function POST(req: Request) {
     if (watsonRaw) {
       const anyW = watsonRaw as any;
       watson = {
+        status: anyW.status ?? "unavailable",
+        language: anyW.language,
         overallScore: clampScore(anyW.overallScore, 50),
         sentimentLabel: String(anyW.sentimentLabel || "neutral"),
         sentimentScore:
@@ -109,7 +124,8 @@ export async function POST(req: Request) {
     } else {
       watson = {
         overallScore: 50,
-        sentimentLabel: "neutral",
+        status: "unavailable",
+        sentimentLabel: "unavailable",
         sentimentScore: 0,
         topFlags: [
           "Watson analysis failed. Using safe neutral fallback.",
@@ -131,7 +147,13 @@ export async function POST(req: Request) {
         : [];
 
       gemini = {
+        criticalIssues: anyG.criticalIssues ?? [],
+        contextSummary: anyG.contextSummary,
+        localizationSummary: anyG.localizationSummary,
+        threatLevel: anyG.threatLevel ?? "unavailable",
+        threatSummary: anyG.threatSummary ?? "Threat assessment unavailable.",
         overallScore: clampScore(anyG.overallScore, 55),
+        scoreReason: typeof anyG.scoreReason === "string" ? anyG.scoreReason : undefined,
         culturalRiskSummary: String(
           anyG.culturalRiskSummary ||
             "No cultural risk summary was returned by the model."
@@ -166,12 +188,13 @@ export async function POST(req: Request) {
       improvementIdeas: [
         "Please try again later.",
       ],
-      
+
       };
     }
 
-    const overallScore = Math.round(
-      (watson.overallScore + gemini.overallScore) / 2
+    // Overall score: 70% cultural assessment, 30% sentiment.
+    const overallScore = calculateOverallScore(
+      gemini.overallScore, watson.overallScore, gemini.criticalIssues ?? []
     );
     const riskLevel = getRiskLevel(overallScore);
 
@@ -184,6 +207,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(payload);
   } catch (err) {
+    if (err instanceof UnanalyzableTextError) {
+      return NextResponse.json({ error: err.message, code: "UNANALYZABLE_TEXT" }, { status: 422 });
+    }
     console.error("[Analyze route] Fatal error:", err);
     return NextResponse.json(
       { error: "Unexpected error while analyzing the text." },

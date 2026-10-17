@@ -8,6 +8,8 @@ const IBM_API_KEY = process.env.IBM_API_KEY;
 const IBM_SERVICE_URL = process.env.IBM_SERVICE_URL;
 
 export type WatsonResult = {
+  status?: "available" | "unavailable";
+  language?: string;
   overallScore: number;        // 0–100
   sentimentLabel: string;      // positive | negative | neutral | mixed
   sentimentScore: number;      // raw -1..1
@@ -17,7 +19,8 @@ export type WatsonResult = {
 function buildMockWatson(): WatsonResult {
   return {
     overallScore: 50,
-    sentimentLabel: "neutral",
+    status: "unavailable",
+    sentimentLabel: "unavailable",
     sentimentScore: 0.05,
     topFlags: [
       "Mock mode: Watson API is not configured or failed.",
@@ -32,7 +35,8 @@ export async function runWatsonAnalysis(
   if (!text || !text.trim()) {
     return {
       overallScore: 50,
-      sentimentLabel: "neutral",
+      status: "unavailable",
+    sentimentLabel: "unavailable",
       sentimentScore: 0,
       topFlags: ["No text provided for sentiment analysis."],
     };
@@ -55,11 +59,13 @@ export async function runWatsonAnalysis(
     const res = await nlu.analyze({
       text,
       features: { sentiment: {} },
-      // IBM language auto-detect yapabiliyor ama dün de böyle kullanıyorduk:
-      language: "en",
+      // Omit language so Watson detects the source language.
     });
 
     const doc = res.result.sentiment?.document;
+    if (!doc || typeof doc.score !== "number" || !Number.isFinite(doc.score) || !doc.label) {
+      return buildMockWatson();
+    }
     const rawScore =
       typeof doc?.score === "number" ? doc.score : 0;
 
@@ -74,19 +80,21 @@ export async function runWatsonAnalysis(
 
     if (Math.abs(rawScore) < 0.15) {
       topFlags.push(
-        "No major sentiment issues detected by Watson for this text."
+        "The emotional polarity is neutral; this does not assess threats or safety."
       );
     } else if (rawScore > 0.15) {
       topFlags.push(
-        "Message leans positive and may sound slightly over-promising in some contexts."
+        "The emotional polarity is positive; this does not mean the message is safe."
       );
     } else {
       topFlags.push(
-        "Message leans negative and may feel too alarming for some audiences."
+        "The emotional polarity is negative; threat assessment is shown separately."
       );
     }
 
     return {
+      status: "available",
+      language: res.result.language,
       overallScore,
       sentimentLabel,
       sentimentScore: rawScore,

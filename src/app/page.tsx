@@ -9,12 +9,20 @@ type AnalyzeResponse = {
   overallScore: number;
   riskLevel: "low" | "medium" | "high";
   watson: {
+    status?: "available" | "unavailable";
+    language?: string;
     overallScore: number;
     sentimentLabel: string;
     sentimentScore: number;
     topFlags: string[];
   };
   gemini: {
+    criticalIssues?: { kind: string; phrase: string; explanation: string; suggestion: string }[];
+    contextSummary?: string;
+    localizationSummary?: string;
+    threatLevel?: string;
+    threatSummary?: string;
+    scoreReason?: string;
     overallScore: number;
     culturalRiskSummary: string;
     toneSummary: string;
@@ -33,8 +41,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
 
-  const hasCriticalRisk =
-    data?.overallScore != null && data.overallScore < 70;
+  const hasCriticalRisk = data?.riskLevel === "high";
 
   async function handleAnalyze() {
     setLoading(true);
@@ -176,7 +183,7 @@ export default function HomePage() {
               </div>
 
               {error && (
-                <p className="text-xs md:text-sm text-rose-200 bg-rose-950/70 border border-rose-500/50 rounded-xl px-3 py-2 mt-1">
+                <p role="alert" className="text-xs md:text-sm text-rose-200 bg-rose-950/70 border border-rose-500/50 rounded-xl px-3 py-2 mt-1">
                   {error}
                 </p>
               )}
@@ -345,7 +352,7 @@ export default function HomePage() {
     <div className="text-xs md:text-sm text-slate-200/85 leading-relaxed space-y-1">
       <p>
         <span className="font-semibold text-slate-100">Overall risk:</span>{" "}
-        Medium (58/100) 
+        Medium (58/100)
         The message is clear, but the tone may feel overconfident for the selected market.
       </p>
       <p>
@@ -446,7 +453,7 @@ export default function HomePage() {
                       : "Critical risk"}
                   </span>
                 </div>
-                
+
                 <div className="text-sm md:text-base max-w-2xl text-slate-100/95 leading-relaxed">
                   {hasCriticalRisk ? (
                     <p>
@@ -492,15 +499,38 @@ export default function HomePage() {
               </div>
             </div>
 
+            {!!data.gemini.criticalIssues?.length && (
+              <div className="rounded-2xl border border-rose-400/40 bg-rose-950/40 p-5">
+                <h3 className="text-sm font-semibold text-rose-200">Critical translation issue</h3>
+                <p className="mt-1 text-xs text-slate-300">A major meaning error caps the overall score at 39.</p>
+                {data.gemini.criticalIssues.map((issue, index) => (
+                  <div key={index} className="mt-3 space-y-1 text-sm">
+                    <p className="font-semibold text-slate-100">“{issue.phrase}”</p>
+                    <p className="text-slate-200">{issue.explanation}</p>
+                    <p className="text-emerald-200">Suggested: {issue.suggestion}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {data.gemini.scoreReason && (
+              <div className="rounded-2xl border border-white/15 bg-slate-900/70 p-5" role="note">
+                <h3 className="text-sm font-semibold text-slate-100">Why this score?</h3>
+                <p className="mt-2 text-sm text-slate-200">{data.gemini.scoreReason}</p>
+              </div>
+            )}
+            <div className="rounded-2xl border border-amber-400/30 bg-slate-900/70 p-5">
+              <h3 className="text-sm font-semibold">Threats &amp; violence: {({ none: "None identified", possible: "Possible / context dependent", explicit: "Explicit threat", unavailable: "Unavailable" } as Record<string, string>)[data.gemini.threatLevel ?? "unavailable"] ?? "Unavailable"}</h3>
+              <p className="mt-2 text-sm text-slate-200">{data.gemini.threatSummary ?? "Threat assessment unavailable."}</p>
+            </div>
             {/* Two result cards - STACKED VERTICALLY */}
             {/* grid-cols-1 yaparak alt alta aldık */}
             <div className="grid gap-6 grid-cols-1">
-              
+
               {/* Sentiment card */}
               <div className="relative group">
                 <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-sky-500/35 via-indigo-500/35 to-fuchsia-500/35 opacity-80 blur-[3px] group-hover:opacity-100 transition-opacity" />
                 <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-5 md:p-7 flex flex-col gap-6 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
-                  
+
                   {/* Başlık ve Skor - SAĞ ÜSTTE */}
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-1">
@@ -513,23 +543,37 @@ export default function HomePage() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-300/90 max-w-lg">
-                        Emotional charge & polarity. Detects if your message sounds too aggressive, negative, or overly enthusiastic.
+                        Positive, neutral or negative emotional polarity. This is not a safety score or a threat detector.
                       </p>
                     </div>
 
                     {/* Skor ve Etiket Sağda */}
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-baseline gap-2 text-sky-300">
+                    <div className="flex flex-col items-start md:items-end gap-2">
+                      <div className="flex items-baseline gap-2 text-white">
                         <span className="text-4xl font-bold">
-                          {data.watson?.overallScore ?? "–"}
+                          {data.watson?.status === "available"
+                            ? Math.round(((Math.max(-1, Math.min(1, data.watson.sentimentScore)) + 1) / 2) * 100)
+                            : "–"}
                         </span>
-                        <span className="text-sm uppercase tracking-wide opacity-80">
-                          / 100
-                        </span>
+                        <span className="text-sm uppercase tracking-wide opacity-80">/ 100</span>
                       </div>
-                      {/* Sentiment Label'ı buraya taşıdık */}
-                      <span className="text-xs font-medium uppercase tracking-widest text-sky-200/80">
-                        {data.watson?.sentimentLabel ?? "n/a"}
+                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                        data.watson?.status !== "available"
+                          ? "border-slate-600/50 bg-slate-800/60 text-slate-300"
+                          : data.watson.sentimentLabel === "negative"
+                          ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
+                          : data.watson.sentimentLabel === "positive"
+                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          : "border-sky-400/30 bg-sky-400/10 text-sky-200"
+                      }`}>
+                        {data.watson?.status === "available"
+                          ? ({ positive: "Positive", negative: "Negative", neutral: "Neutral", mixed: "Mixed" } as Record<string, string>)[data.watson.sentimentLabel] ?? "Unavailable"
+                          : "Unavailable"}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {data.watson?.language
+                          ? `Language: ${{ tr: "Turkish", en: "English", de: "German", fr: "French", es: "Spanish", ar: "Arabic" }[data.watson.language] ?? data.watson.language}`
+                          : "Language not identified"}
                       </span>
                     </div>
                   </div>
@@ -540,14 +584,14 @@ export default function HomePage() {
                     <div className="text-xs uppercase tracking-wider text-slate-400">
                         Sentiment Spectrum
                     </div>
-                    
+
                     {/* Sentiment Spectrum Bar - Full Width */}
-                    <div className="relative h-3 w-full rounded-full bg-slate-800/50 shadow-inner mt-1">
+                    <div hidden={data.watson?.status !== "available"} className="relative h-3 w-full rounded-full bg-slate-800/50 shadow-inner mt-1">
                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-rose-500/80 via-slate-400/50 to-emerald-500/80" />
-                       <div 
+                       <div
                          className="absolute top-1/2 -mt-2 h-4 w-4 -translate-x-1/2 rounded-full border-[2px] border-white bg-slate-100 shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-1000 ease-out"
-                         style={{ 
-                           left: `${Math.min(Math.max(data.watson?.overallScore || 0, 0), 100)}%` 
+                         style={{
+                           left: `${((data.watson?.sentimentScore ?? 0) + 1) * 50}%`
                          }}
                        />
                     </div>
@@ -577,7 +621,7 @@ export default function HomePage() {
               <div className="relative group">
                 <div className="absolute inset-[1px] rounded-[26px] bg-gradient-to-br from-fuchsia-500/35 via-violet-500/35 to-cyan-400/35 opacity-80 blur-[3px] group-hover:opacity-100 transition-opacity" />
                 <div className="relative rounded-[26px] border border-white/18 bg-slate-950/80 bg-clip-padding backdrop-blur-2xl p-5 md:p-7 flex flex-col gap-6 shadow-[0_20px_55px_rgba(15,23,42,0.95)]">
-                  
+
                   {/* Başlık ve Skor - SAĞ ÜSTTE */}
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="space-y-1">
@@ -593,19 +637,29 @@ export default function HomePage() {
                         Taboos, cultural fit, tone-of-voice and context.
                       </p>
                     </div>
-                    
+
                     {/* Skor Sağda */}
-                    <div className="flex items-baseline gap-2 text-emerald-300">
+                    <div className="flex items-baseline gap-2 text-white">
                       <span className="text-4xl font-bold">
                         {data.gemini?.overallScore ?? "–"}
                       </span>
-                      <span className="text-sm uppercase tracking-wide opacity-80">
-                        / 100
-                      </span>
+                      <span className="text-sm uppercase tracking-wide opacity-80">/ 100</span>
                     </div>
                   </div>
 
                   <div className="space-y-6 text-sm md:text-base text-slate-100/95 leading-relaxed">
+                      {data.gemini.contextSummary && (
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Context &amp; intent</h4>
+                          <p className="text-slate-200 whitespace-pre-line">{data.gemini.contextSummary}</p>
+                        </div>
+                      )}
+                      {data.gemini.localizationSummary && (
+                        <div>
+                          <h4 className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Language &amp; localization</h4>
+                          <p className="text-slate-200 whitespace-pre-line">{data.gemini.localizationSummary}</p>
+                        </div>
+                      )}
                     <div>
                       <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">
                         Cultural risk
@@ -634,7 +688,7 @@ export default function HomePage() {
                         )}
                       </ul>
                     </div>
-                    
+
                     <div>
                       <div className="text-xs uppercase tracking-wider text-slate-400 mb-1.5">Improvement Ideas</div>
                       <ul className="space-y-2 list-disc list-inside text-emerald-100/90">
