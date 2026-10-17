@@ -1,12 +1,12 @@
 import { calculateOverallScore } from "@/lib/criticalTranslation";
 import type { CriticalTranslationIssue } from "@/lib/criticalTranslation";
 // src/app/api/analyze/route.ts
-// LocApp AI analyze endpoint – combines Watson + Gemini.
+// LocApp AI analyze endpoint – combines Watson + Groq.
 // ASCII-only.
 
 import { NextResponse } from "next/server";
 import { runWatsonAnalysis, WatsonResult } from "@/lib/ibmWatson";
-import { runGeminiAnalysis, GeminiAnalysis } from "@/lib/geminiClient";
+import { runGroqAnalysis, GeminiAnalysis } from "@/lib/groqClient";
 
 import { UnanalyzableTextError } from "@/lib/geminiScore";
 
@@ -95,11 +95,11 @@ export async function POST(req: Request) {
       (async () => {
         try {
 
-          geminiRaw = await runGeminiAnalysis(text, market, audience);
+          geminiRaw = await runGroqAnalysis(text, market, audience);
 
         } catch (err) {
           if (err instanceof UnanalyzableTextError) throw err;
-          console.error("[Gemini] route error:", err);
+          console.error("[Groq] route error:", err);
         }
       })(),
     ]);
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       toneSummary:
         "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
       topRisks: [
-        "Gemini analysis is temporarily unavailable due to free-tier rate limits.",
+        "Groq analysis is temporarily unavailable.",
       ],
       improvementIdeas: [
         "Please try again later.",

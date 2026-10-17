@@ -717,7 +717,7 @@ export default function HomePage() {
             </span>
             <span>·</span>
             <span className="font-medium text-slate-200">
-              Google Gemini
+              GPT-OSS
             </span>
           </span>
         </footer>

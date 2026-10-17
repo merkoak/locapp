@@ -1,37 +1,6 @@
-// src/lib/geminiClient.ts
-// ASCII-safe Gemini client using @google/genai for cultural and tone-of-voice analysis.
-
-import { GoogleGenAI, Type } from "@google/genai";
 import { parseGeminiAnalysis, UnanalyzableTextError } from "./geminiScore";
 import type { GeminiAnalysis } from "./geminiScore";
 export type { GeminiAnalysis } from "./geminiScore";
-
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-
-const GEMINI_MODEL_ID =
-  process.env.GEMINI_MODEL_ID || process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
-
-
-const FALLBACK_ANALYSIS: GeminiAnalysis = {
-  overallScore: 55,
-  contextSummary: "Context assessment temporarily unavailable.",
-  localizationSummary: "Localization assessment temporarily unavailable.",
-  threatLevel: "unavailable",
-  threatSummary: "Threat and violence assessment is temporarily unavailable.",
-  culturalRiskSummary:
-    "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
-  toneSummary:
-    "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
-  topRisks: [
-    "Gemini analysis is temporarily unavailable due to rate limits.",
-  ],
-  improvementIdeas: [
-    "Please try again later.",
-  ],
-};
-
 function buildPrompt(text: string, market?: string, audience?: string): string {
   return [
     "You are a localization strategist assessing cultural safety, not positivity.",
@@ -57,74 +26,54 @@ function buildPrompt(text: string, market?: string, audience?: string): string {
     JSON.stringify({ market: market?.trim() || "Global", audience: audience?.trim() || "General", text }),
   ].join("\n");
 }
-export async function analyzeWithGemini(
-  text: string,
-  market?: string,
-  audience?: string
-): Promise<GeminiAnalysis> {
-  if (!GEMINI_API_KEY) {
-    console.warn(
-      "[Gemini] GEMINI_API_KEY is not set. Returning fallback analysis."
-    );
-    return FALLBACK_ANALYSIS;
-  }
+const stringField = { type: "string" };
+const properties = {
+  criticalIssues: { type: "array", items: { type: "object", additionalProperties: false,
+    required: ["kind", "phrase", "explanation", "suggestion"],
+    properties: { kind: { type: "string", enum: ["literal_meaning_break", "incoherent_meaning"] }, phrase: stringField, explanation: stringField, suggestion: stringField } } },
+  contextSummary: stringField, localizationSummary: stringField,
+  threatLevel: { type: "string", enum: ["none", "possible", "explicit"] },
+  threatSummary: stringField, isAnalyzable: { type: "boolean" }, inputIssue: stringField,
+  overallScore: { type: ["number", "null"] }, scoreReason: stringField,
+  culturalRiskSummary: stringField, toneSummary: stringField,
+  topRisks: { type: "array", items: stringField }, improvementIdeas: { type: "array", items: stringField },
+};
 
+export async function runGroqAnalysis(text: string, market?: string, audience?: string): Promise<GeminiAnalysis> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("Groq is not configured");
   try {
-    const client = new GoogleGenAI({
-      apiKey: GEMINI_API_KEY,
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(60000),
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+        messages: [{ role: "user", content: buildPrompt(text, market, audience) }],
+        reasoning_effort: "low", max_completion_tokens: 2200,
+        response_format: { type: "json_schema", json_schema: { name: "localization_analysis", strict: true,
+          schema: { type: "object", additionalProperties: false, required: Object.keys(properties), properties } } },
+      }),
     });
-
-    const prompt = buildPrompt(text, market, audience);
-
-    const response = await client.models.generateContent({
-      model: GEMINI_MODEL_ID,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          required: ["criticalIssues", "contextSummary", "localizationSummary", "threatLevel", "threatSummary", "isAnalyzable", "inputIssue", "overallScore", "scoreReason", "culturalRiskSummary", "toneSummary", "topRisks", "improvementIdeas"],
-          properties: {
-            criticalIssues: { type: Type.ARRAY, items: { type: Type.OBJECT, required: ["kind", "phrase", "explanation", "suggestion"], properties: { kind: { type: Type.STRING, enum: ["literal_meaning_break", "incoherent_meaning"] }, phrase: { type: Type.STRING }, explanation: { type: Type.STRING }, suggestion: { type: Type.STRING } } } },
-            contextSummary: { type: Type.STRING },
-            localizationSummary: { type: Type.STRING },
-            threatLevel: { type: Type.STRING, enum: ["none", "possible", "explicit"] },
-            threatSummary: { type: Type.STRING },
-            isAnalyzable: { type: Type.BOOLEAN },
-            inputIssue: { type: Type.STRING },
-            overallScore: { type: Type.NUMBER, nullable: true },
-            scoreReason: { type: Type.STRING },
-            culturalRiskSummary: { type: Type.STRING },
-            toneSummary: { type: Type.STRING },
-            topRisks: { type: Type.ARRAY, items: { type: Type.STRING } },
-            improvementIdeas: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-        },
-      },
-    });
-
-    const outputText =
-      typeof (response as any).text === "function"
-        ? (response as any).text()
-        : (response as any).text || "";
-
-    if (!outputText || !outputText.trim()) {
-      console.warn("[Gemini] Empty text from API, using fallback.");
-      return FALLBACK_ANALYSIS;
+    if (!response.ok) {
+      console.error("[Groq] Request failed with status", response.status);
+      throw new Error("Groq request failed");
     }
-
-    return parseGeminiAnalysis(outputText, text);
+    const result = await response.json();
+    const output = result.choices?.[0]?.message?.content;
+    if (typeof output !== "string") throw new Error("Missing Groq analysis");
+    return parseGeminiAnalysis(output, text);
   } catch (error) {
     if (error instanceof UnanalyzableTextError) throw error;
-    console.error("[Gemini] analysis error with @google/genai:", error);
-    return FALLBACK_ANALYSIS;
+    console.error("[Groq] Analysis unavailable:", error instanceof Error ? error.message : "Unknown failure");
+    return {
+      overallScore: 55, threatLevel: "unavailable", criticalIssues: [],
+      contextSummary: "Analysis temporarily unavailable. Please try again later.",
+      localizationSummary: "Analysis temporarily unavailable. Please try again later.",
+      threatSummary: "Threat assessment unavailable.",
+      culturalRiskSummary: "Groq analysis is temporarily unavailable. Please try again later.",
+      toneSummary: "Analysis temporarily unavailable.",
+      topRisks: ["Groq analysis unavailable; this is a fallback result."], improvementIdeas: ["Please try again later."],
+    };
   }
-}
-
-export async function runGeminiAnalysis(
-  text: string,
-  market?: string,
-  audience?: string
-): Promise<GeminiAnalysis> {
-  return analyzeWithGemini(text, market, audience);
 }

@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Analysis providers
+
+Cultural and localization analysis uses Groq with `openai/gpt-oss-120b`.
+Sentiment analysis uses IBM Watson with automatic language detection.
+Gemini is no longer called.
+
+Set these server-side environment variables in `.env.local` for local development
+and in your hosting provider's environment settings for deployment:
+
+- `GROQ_API_KEY`: your Groq API key (required).
+- `GROQ_MODEL`: optional; defaults to `openai/gpt-oss-120b`.
+- `IBM_API_KEY` and `IBM_SERVICE_URL`: Watson credentials.
+
+Never commit API keys. Restart the local server or redeploy after changing
+hosting environment variables. Existing Gemini credentials do not configure Groq.

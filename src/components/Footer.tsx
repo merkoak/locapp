@@ -9,7 +9,7 @@ export default function Footer() {
           <span>Powered by</span>
           <span className="font-medium text-slate-200">IBM Watson</span>
           <span>·</span>
-          <span className="font-medium text-slate-200">Google Gemini</span>
+          <span className="font-medium text-slate-200">GPT-OSS</span>
         </span>
 
       </div>
