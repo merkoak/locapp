@@ -12,7 +12,7 @@ import { UnanalyzableTextError } from "@/lib/geminiScore";
 
 export const runtime = "nodejs";
 
-type RiskLevel = "low" | "medium" | "high";
+type RiskLevel = "low" | "medium" | "high" | "incomplete";
 
 type WatsonPayload = {
   status?: "available" | "unavailable";
@@ -38,7 +38,7 @@ type GeminiPayload = {
 };
 
 type AnalyzeResponse = {
-  overallScore: number;
+  overallScore: number | null;
   riskLevel: RiskLevel;
   watson: WatsonPayload;
   gemini: GeminiPayload;
@@ -177,6 +177,7 @@ export async function POST(req: Request) {
       };
     } else {
       gemini = {
+        threatLevel: "unavailable",
         overallScore: 55,
         culturalRiskSummary:
         "Analysis is temporarily unavailable right now due to system limits. Please try again later.",
@@ -193,10 +194,11 @@ export async function POST(req: Request) {
     }
 
     // Overall score: 70% cultural assessment, 30% sentiment.
-    const overallScore = calculateOverallScore(
-      gemini.overallScore, watson.overallScore, gemini.criticalIssues ?? []
-    );
-    const riskLevel = getRiskLevel(overallScore);
+    const complete = watson.status === "available" && gemini.threatLevel !== "unavailable" && !!geminiRaw;
+    const overallScore = complete
+      ? calculateOverallScore(gemini.overallScore, watson.overallScore, gemini.criticalIssues ?? [])
+      : null;
+    const riskLevel: RiskLevel = overallScore === null ? "incomplete" : getRiskLevel(overallScore);
 
     const payload: AnalyzeResponse = {
       overallScore,

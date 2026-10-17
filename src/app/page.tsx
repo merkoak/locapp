@@ -1,17 +1,17 @@
 // src/app/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 
 type AnalyzeResponse = {
-  overallScore: number;
-  riskLevel: "low" | "medium" | "high";
+  overallScore: number | null;
+  riskLevel: "low" | "medium" | "high" | "incomplete";
   watson: {
     status?: "available" | "unavailable";
     language?: string;
-    overallScore: number;
+    overallScore: number | null;
     sentimentLabel: string;
     sentimentScore: number;
     topFlags: string[];
@@ -23,7 +23,7 @@ type AnalyzeResponse = {
     threatLevel?: string;
     threatSummary?: string;
     scoreReason?: string;
-    overallScore: number;
+    overallScore: number | null;
     culturalRiskSummary: string;
     toneSummary: string;
     topRisks: string[];
@@ -41,6 +41,17 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
 
+  useEffect(() => {
+    // Local-only fixture for checking the incomplete-result presentation.
+    if (process.env.NODE_ENV !== "development" || new URLSearchParams(window.location.search).get("demo") !== "incomplete") return;
+    setData({
+      overallScore: null, riskLevel: "incomplete",
+      watson: { status: "available", language: "tr", overallScore: 93, sentimentLabel: "positive", sentimentScore: 0.86, topFlags: ["Demo result: positive sentiment. This is not a safety score."] },
+      gemini: { overallScore: null, threatLevel: "unavailable", threatSummary: "Threat assessment unavailable.", culturalRiskSummary: "Analysis temporarily unavailable. Please try again later.", toneSummary: "Analysis temporarily unavailable.", topRisks: ["Demo: cultural analysis service unavailable."], improvementIdeas: ["Please try again later."] },
+    });
+    setTimeout(() => document.getElementById("analysis-results")?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+  }, []);
+  const isIncomplete = data?.riskLevel === "incomplete";
   const hasCriticalRisk = data?.riskLevel === "high";
 
   async function handleAnalyze() {
@@ -423,11 +434,13 @@ export default function HomePage() {
 
         {/* Results */}
         {data && (
-          <section className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <section id="analysis-results" className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Overall banner */}
             <div
               className={`relative rounded-3xl border px-5 py-5 md:px-8 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-8 bg-clip-padding backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.95)] ${
-                hasCriticalRisk
+                isIncomplete
+                  ? "border-slate-500/50 bg-slate-950/90"
+                  : hasCriticalRisk
                   ? "border-rose-500/70 bg-gradient-to-r from-rose-900/85 via-rose-950/95 to-slate-950/95"
                   : data.riskLevel === "medium"
                   ? "border-amber-400/70 bg-gradient-to-r from-amber-900/85 via-slate-950/95 to-slate-950/95"
@@ -440,13 +453,13 @@ export default function HomePage() {
                 </span>
                 <div className="flex items-baseline gap-3 md:gap-4">
                   <span className="text-4xl md:text-5xl font-bold text-slate-50">
-                    {data.overallScore}
+                    {isIncomplete ? "–" : data.overallScore}
                   </span>
                   <span className="text-sm md:text-base uppercase tracking-wide text-slate-200/90">
                     / 100
                   </span>
                   <span className="text-xs md:text-sm px-3 py-1 rounded-full border border-white/45 bg-black/40 text-slate-50 font-medium">
-                    {data.riskLevel === "low"
+                    {isIncomplete ? "Analysis incomplete" : data.riskLevel === "low"
                       ? "Low risk"
                       : data.riskLevel === "medium"
                       ? "Attention needed"
@@ -455,7 +468,9 @@ export default function HomePage() {
                 </div>
 
                 <div className="text-sm md:text-base max-w-2xl text-slate-100/95 leading-relaxed">
-                  {hasCriticalRisk ? (
+                  {isIncomplete ? (
+                    <p>One or more analysis services are unavailable. An overall score cannot be calculated. Available results are shown below. Please try again later.</p>
+                  ) : hasCriticalRisk ? (
                     <p>
                       LocAI detects <strong>critical cultural or tonal risks</strong>. We strongly
                       recommend urgent human review. Babil Agency can redesign this
@@ -485,7 +500,7 @@ export default function HomePage() {
                     Urgent: Talk to Babil Agency
                   </a>
                 )}
-                {!hasCriticalRisk && (
+                {!hasCriticalRisk && !isIncomplete && (
                   <a
                     href="https://babiltr.com"
                     className="inline-flex items-center justify-center rounded-2xl px-5 md:px-6 py-2.5 text-sm md:text-base font-bold bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 hover:from-fuchsia-400 hover:via-violet-400 hover:to-cyan-300 shadow-[0_14px_40px_rgba(59,130,246,0.75)] transition-transform active:scale-95"
@@ -641,7 +656,7 @@ export default function HomePage() {
                     {/* Skor Sağda */}
                     <div className="flex items-baseline gap-2 text-white">
                       <span className="text-4xl font-bold">
-                        {data.gemini?.overallScore ?? "–"}
+                        {data.gemini?.threatLevel === "unavailable" ? "–" : data.gemini?.overallScore ?? "–"}
                       </span>
                       <span className="text-sm uppercase tracking-wide opacity-80">/ 100</span>
                     </div>
